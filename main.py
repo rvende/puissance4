@@ -56,7 +56,7 @@ def eval_win(state, player):
 
     #Victoire Diagonale
     #diagonale droite
-    for i in range(-4,9):
+    for i in range(-3,8):
         d = np.diag(state,i)
         countSame = 0
         previous = 0
@@ -71,7 +71,7 @@ def eval_win(state, player):
 
     # diagonale gauche
     stateT = verticalMirror(state)
-    for i in range(-4,9):
+    for i in range(-3, 8):
         d = np.diag(stateT,i)
         countSame = 0
         previous = 0
@@ -96,18 +96,9 @@ def generateLeftCheck(player):
         [ player, player, player, player, 0],
         [ player, player, player, 0, 0]
     ]
-    return tab
+    return tab, [4,3]
 
 def generateCenterCheck(player):
-    - OOOO -
-    X OOOO -
-    - OOOO X
-
-
-    - OOO-
-    X OOO - - 
-    - - 000 X
-
     tab = [
         [ 0, player, player, player, player, 0],
         [ -player, player, player, player, player, 0],
@@ -116,36 +107,48 @@ def generateCenterCheck(player):
         [ -player, player, player, player, 0, 0],
         [ 0, 0, player, player, player, -player]
     ]
-
+    return tab, [4, 4, 4, 3, 3, 3]
 
 def generateRightCheck(player):
     tab = [
         [ 0, player, player, player, player],
         [ 0, 0, player, player, player]
     ]
-    return tab
+    return tab, [4, 3]
+
+def find(line, subline):
+    for i in range(len(line)-len(subline)):
+        if np.all( [subline == line[i:i+len(subline)]] ):
+            return True
+    return False
 
 
 def eval_score(state):
     # Find the longest coin chain 
     accu = 0
 
-    # Horizontale 
-    for i in range(0,HEIGHT):
-        countSame = 0
-        previous = 0
-        openLeft = False
-        for j in range(0,WIDTH):
-            print(i, j, previous, countSame)
-            if state[i,j] == previous and previous != 0:
-                countSame+=1
-            elif state[i,j]==0 and countSame != 0:
-                accu += countSame + 1
-                countSame = 0
-            else :
-                countSame = 0
+    # Horizontale
+    tabC, tabC_score = generateCenterCheck(HUMAN)
+    tabL, tabL_score = generateLeftCheck(HUMAN)
+    tabR, tabR_score = generateRightCheck(HUMAN)
 
-            previous = state[i,j]
+    for i in range(HEIGHT):
+        #Center
+        for idx in range(len(tabC)): 
+            if find(state[i], tabC[idx]):
+                accu += tabC_score[idx]
+
+        #Left
+        for idx in range(len(tabL)):
+            if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
+                accu += tabL_score[idx]
+        #Right
+        for idx in range(len(tabR)):
+            if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
+                accu += tabR_score[idx]
+
+
+
     return accu
 
 Start = np.zeros((HEIGHT,WIDTH))
@@ -263,10 +266,14 @@ def main():
     human_turn()
     human_turn()
     human_turn()
-    human_turn()
-    human_turn()
+    addMove(Start, 10, COMP)
+    #addMove(Start, 10, COMP)
     print_board(Start)
-    print(">>>>", eval_score(Start))
+    tab = generateCenterCheck(HUMAN)
+    for e in tab: 
+        print(e)
+        print( find(Start[0], e) )
+    ##print(">>>>", eval_score(Start))
 
     # clist = children_states(Start,COMP)
     # print("children")
