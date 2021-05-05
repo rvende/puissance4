@@ -9,7 +9,7 @@ import numpy as np
 COMP = 1
 HUMAN = -1
 
-DEPTH = 3
+DEPTH = 2
 HEIGHT = 8
 WIDTH = 12
 # Number of aligned coins to win
@@ -75,7 +75,7 @@ def generateLeftCheck(player):
         [ player, player, player, player, 0],
         [ player, player, player, 0, 0]
     ]
-    return tab, [4,3]
+    return tab, [2,1]
 
 def generateCenterCheck(player):
     tab = [
@@ -99,7 +99,7 @@ def generateRightCheck(player):
         [ 0, player, player, player, player],
         [ 0, 0, player, player, player]
     ]
-    return tab, [4, 3]
+    return tab, [2, 1]
 
 def find(line, subline):
     for i in range(len(line)-len(subline)):
@@ -107,6 +107,8 @@ def find(line, subline):
             return True
     return False
 
+def eval_global_score(state):
+    return eval_score(state, COMP) - eval_score(state, HUMAN)
 
 def eval_score(state, player):
     # Find the longest coin chain 
@@ -122,38 +124,38 @@ def eval_score(state, player):
         for idx in range(len(tabC)): 
             if find(state[i], tabC[idx]):
                 accu += tabC_score[idx]
-                print("Center")
+                #print("Center")
 
         #Left
         for idx in range(len(tabL)):
             if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
                 accu += tabL_score[idx]
-                print("Left")
+                #print("Left")
 
         #Right
         for idx in range(len(tabR)):
             if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
                 accu += tabR_score[idx]
-                print("Right")
+                #print("Right")
 
     #Vertical
     for i in range(WIDTH):
         for idx in range(len(tabC)): 
             if find(state[:, i], tabC[idx]):
                 accu += tabC_score[idx]
-                print("V Center")
+                #print("V Center")
 
         #Bottom
         for idx in range(len(tabL)):
             if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
                 accu += tabL_score[idx]
-                print("V Bottom")
+                #print("V Bottom")
 
         #Up
         for idx in range(len(tabR)):
             if np.all( [ tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
                 accu += tabR_score[idx]
-                print("V Up")
+                #print("V Up")
 
     #Diagonal
     for i in range(-3,8):
@@ -161,19 +163,19 @@ def eval_score(state, player):
         for idx in range(len(tabC)): 
             if find(d, tabC[idx]):
                 accu += tabC_score[idx]
-                print("D Center")
+                #print("D Center")
 
         #Bottom
         for idx in range(len(tabL)):
             if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
                 accu += tabL_score[idx]
-                print("D Bottom")
+                #print("D Bottom")
 
         #Up
         for idx in range(len(tabR)):
             if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
                 accu += tabR_score[idx]
-                print("D Up")
+                #print("D Up")
 
 
     stateT = verticalMirror(state)
@@ -182,19 +184,19 @@ def eval_score(state, player):
         for idx in range(len(tabC)): 
             if find(d, tabC[idx]):
                 accu += tabC_score[idx]
-                print("DG Center")
+                #print("DG Center")
 
         #Bottom
         for idx in range(len(tabL)):
             if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
                 accu += tabL_score[idx]
-                print("DG Bottom")
+                #print("DG Bottom")
 
         #Up
         for idx in range(len(tabR)):
             if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
                 accu += tabR_score[idx]
-                print("DG Up")
+                #print("DG Up")
 
     return accu
 
@@ -243,14 +245,14 @@ def choose_move():
     best = -infinity
     best_index = None
     for c in children:
-        if Scores[npToTuple(c)] > best:
+        if Scores[npToTuple(c)] >= best:
             best = Scores[npToTuple(c)]
             best_index = c
     Start = best_index;
 
 
 def ai_turn(): 
-    global Start
+    global Start, Scores
     print(f'AI turn ["X"]')
     print_board(Start)
     Scores = {}
@@ -280,9 +282,9 @@ def minimax(current_state, player, depth):
     children = eval_win(current_state, player)
 
     if type(children) == int:
-        score = children
+        score = children*infinity
     elif depth == 0:
-        score = eval_score(current_state, player)
+        score = eval_global_score(current_state)
     else:
         turn = player
         score = -turn
@@ -291,8 +293,7 @@ def minimax(current_state, player, depth):
                 minimax(child_state, -player, depth-1)
             score = max(score,Scores[npToTuple(child_state)]) if turn == COMP else min(score,Scores[npToTuple(child_state)])
     Scores[npToTuple(current_state)] = score
-
-    return 
+    #print(">>>>", len(Scores)) 
             
 
 
