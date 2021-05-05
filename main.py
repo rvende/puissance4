@@ -9,10 +9,16 @@ import numpy as np
 COMP = 1
 HUMAN = -1
 
+DEPTH = 3
+HEIGHT = 8
+WIDTH = 12
+# Number of aligned coins to win
+CONNECT = 5 
+
 def children_states(state, player):
     turn = player
     children = []
-    for i in range(0,7):
+    for i in range(0, WIDTH):
         if hasSpace(state,i) != 0:
             tmp = state.copy()
             addMove(tmp,i, player)
@@ -23,53 +29,126 @@ def children_states(state, player):
 #TODO verification sur le dernier mouvement
 def eval_win(state, player):
     #Victoire Horizontale
-    for i in range(0,6):
+    for i in range(0,HEIGHT):
         countSame = 0
         previous = 0
-        for j in range(0,7):
+        for j in range(0,WIDTH):
             if state[i,j] == previous and previous != 0:
                 countSame+=1
-                if countSame == 3:
+                if countSame == CONNECT-1:
                     return previous
             else :
                 countSame = 0
                 previous = state[i,j]
 
     #Victoire Verticale
-    for j in range(0,7):
+    for j in range(0,WIDTH):
         countSame = 0
         previous = 0
-        for i in range(0,6):
+        for i in range(0,HEIGHT):
             if state[i,j] == previous and previous != 0:
                 countSame+=1
-                if countSame == 3:
+                if countSame == CONNECT-1:
                     return previous
             else :
                 countSame = 0
                 previous = state[i,j]
 
     #Victoire Diagonale
-    #diagonale qui part de (2,0), (1,0), (0,0)
-    for i in range(-2,6):
+    #diagonale droite
+    for i in range(-4,9):
         d = np.diag(state,i)
         countSame = 0
         previous = 0
-        for j in range(0,len(d)):
+        for j in range(0, len(d)):
             if d[j] == previous and previous != 0:
                 countSame+=1
-                if countSame == 3:
+                if countSame == CONNECT-1:
                     return previous
             else :
                 countSame = 0
                 previous = d[j]
 
-    for i in range(0,7):
+    # diagonale gauche
+    stateT = verticalMirror(state)
+    for i in range(-4,9):
+        d = np.diag(stateT,i)
+        countSame = 0
+        previous = 0
+        for j in range(0, len(d)):
+            if d[j] == previous and previous != 0:
+                countSame+=1
+                if countSame == CONNECT-1:
+                    return previous
+            else :
+                countSame = 0
+                previous = d[j]
+
+
+    for i in range(0,WIDTH):
         if (hasSpace(state,i) != 0):
             return None
     return 0
 
 
-Start = np.zeros((6,7))
+def generateLeftCheck(player):
+    tab = [
+        [ player, player, player, player, 0],
+        [ player, player, player, 0, 0]
+    ]
+    return tab
+
+def generateCenterCheck(player):
+    - OOOO -
+    X OOOO -
+    - OOOO X
+
+
+    - OOO-
+    X OOO - - 
+    - - 000 X
+
+    tab = [
+        [ 0, player, player, player, player, 0],
+        [ -player, player, player, player, player, 0],
+        [ 0, player, player, player, player, -player],
+        [ 0, player, player, player, 0],
+        [ -player, player, player, player, 0, 0],
+        [ 0, 0, player, player, player, -player]
+    ]
+
+
+def generateRightCheck(player):
+    tab = [
+        [ 0, player, player, player, player],
+        [ 0, 0, player, player, player]
+    ]
+    return tab
+
+
+def eval_score(state):
+    # Find the longest coin chain 
+    accu = 0
+
+    # Horizontale 
+    for i in range(0,HEIGHT):
+        countSame = 0
+        previous = 0
+        openLeft = False
+        for j in range(0,WIDTH):
+            print(i, j, previous, countSame)
+            if state[i,j] == previous and previous != 0:
+                countSame+=1
+            elif state[i,j]==0 and countSame != 0:
+                accu += countSame + 1
+                countSame = 0
+            else :
+                countSame = 0
+
+            previous = state[i,j]
+    return accu
+
+Start = np.zeros((HEIGHT,WIDTH))
 Tree = {}
 Scores = {}
 
@@ -91,9 +170,9 @@ def human_turn():
     print(f'Human turn ["O"]')
     print_board(Start)
 
-    while move < 1 or move > 7:
+    while move < 1 or move > WIDTH:
         try:
-            move = int(input('Choose column (1-7): '))
+            move = int(input('Choose column (1-{}): '.format(WIDTH)))
             can_move = (hasSpace(Start,move-1) != 0)
 
             if not can_move:
@@ -138,9 +217,11 @@ def symmetryInTree(state):
     return False
 
 
-def minimax(current_state, player):
+def minimax(current_state, player, depth):
     global Scores
     children = eval_win(current_state, player)
+    if depth == 0:
+        return
     if type(children) == int:
         score = children
     else:
@@ -149,7 +230,7 @@ def minimax(current_state, player):
         for child_state in children:
             result = symmetryInTree(child_state)
             if type(result) == bool:
-                minimax(child_state, -player)
+                minimax(child_state, -player, depth-1)
                 score = max(score,Scores[child_state]) if turn == COMP else min(score,Scores[child_state])
             else :
                 score = max(score,Scores[result]) if turn == COMP else min(score,Scores[result])
@@ -158,10 +239,10 @@ def minimax(current_state, player):
 
 
 def print_board(state):
-    print("*****************************")
-    for x in range(5,-1,-1):
+    print("*************************************************")
+    for x in range(HEIGHT-1,-1,-1):
         s = "|"
-        for y in range(0,7):
+        for y in range(0,WIDTH):
             if state[x,y] == 0:
                 s+="   "
             elif state[x,y] == COMP :
@@ -170,26 +251,27 @@ def print_board(state):
                 s+=" O "
             s+="|"
         print(s)
-        print("*****************************")
+        print("*************************************************")
     print("")
 
 
 def main():
     global Start
-    Tree[Start] = 0
-    print(Tree)
+    # Tree[Start] = 0
+    # print(Tree)
     print_board(Start)
-    addMove(Start,0,HUMAN)
-    addMove(Start,0,HUMAN)
-    addMove(Start,0,HUMAN)
-    addMove(Start,0,HUMAN)
-    addMove(Start,0,HUMAN)
-    addMove(Start,0,HUMAN)
+    human_turn()
+    human_turn()
+    human_turn()
+    human_turn()
+    human_turn()
     print_board(Start)
-    clist = children_states(Start,COMP)
-    print("children")
-    for c in clist:
-        print_board(c)
+    print(">>>>", eval_score(Start))
+
+    # clist = children_states(Start,COMP)
+    # print("children")
+    # for c in clist:
+    #     print_board(c)
 
 
 
