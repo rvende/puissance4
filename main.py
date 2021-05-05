@@ -65,7 +65,8 @@ def eval_win(state, player):
 
     for i in range(0,WIDTH):
         if (hasSpace(state,i) != 0):
-            return None
+            return children_states(state, player)
+    
     return 0
 
 
@@ -83,9 +84,15 @@ def generateCenterCheck(player):
         [ 0, player, player, player, player, -player],
         [ 0, player, player, player, 0],
         [ -player, player, player, player, 0, 0],
-        [ 0, 0, player, player, player, -player]
+        [ 0, 0, player, player, player, -player],
+        [player, player, 0, player, player],
+        [player, player, 0, 0, player],
+        [player, 0, 0, player, player],
+        [player, 0, player, 0, player],
+        [player, 0, player, player, player],
+        [ player, player, player, 0, player]
     ]
-    return tab, [4, 4, 4, 3, 3, 3]
+    return tab, [4, 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4]
 
 def generateRightCheck(player):
     tab = [
@@ -101,14 +108,14 @@ def find(line, subline):
     return False
 
 
-def eval_score(state):
+def eval_score(state, player):
     # Find the longest coin chain 
     accu = 0
 
     # Horizontale
-    tabC, tabC_score = generateCenterCheck(HUMAN)
-    tabL, tabL_score = generateLeftCheck(HUMAN)
-    tabR, tabR_score = generateRightCheck(HUMAN)
+    tabC, tabC_score = generateCenterCheck(player)
+    tabL, tabL_score = generateLeftCheck(player)
+    tabR, tabR_score = generateRightCheck(player)
 
     for i in range(HEIGHT):
         #Center
@@ -189,10 +196,6 @@ def eval_score(state):
                 accu += tabR_score[idx]
                 print("DG Up")
 
-
-
-
-
     return accu
 
 Start = np.zeros((HEIGHT,WIDTH))
@@ -203,7 +206,7 @@ def hasSpace(state, col):
     return (state[:,col] == 0).sum()
 
 
-def addMove(state,col, player):
+def addMove(state, col, player):
     for i in range(5,-1,-1):
         if state[i,col] != 0:
             state[i+1, col] = player
@@ -235,14 +238,13 @@ def human_turn():
 
 
 def choose_move():
-    global Start,Scores
+    global Start
     children = eval_win(Start, COMP)
     best = -infinity
     best_index = None
     for c in children:
-        result = symmetryInTree(c)
-        if Scores[result] > best:
-            best = Scores.get(result)
+        if Scores[npToTuple(c)] > best:
+            best = Scores[npToTuple(c)]
             best_index = c
     Start = best_index;
 
@@ -251,38 +253,47 @@ def ai_turn():
     global Start
     print(f'AI turn ["X"]')
     print_board(Start)
+    Scores = {}
+    minimax(Start, COMP, DEPTH)
     choose_move()
+    print(len(Scores))
 
 def verticalMirror(state):
     return state[:,::-1]
 
-def symmetryInTree(state):
-    if state in Tree:
-        return state
-    if verticalMirror(state) in Tree:
-        return verticalMirror(state)
-    return False
+# def symmetryInTree(state):
+#     if state in Tree:
+#         return state
+#     if verticalMirror(state) in Tree:
+#         return verticalMirror(state)
+#     return False
 
+def npToTuple(state):
+    return tuple(map(tuple, state))
+
+def tupleToNp(tuple_):
+    return np.asarray(tuple_)
 
 def minimax(current_state, player, depth):
     global Scores
+
     children = eval_win(current_state, player)
-    if depth == 0:
-        return
+
     if type(children) == int:
         score = children
+    elif depth == 0:
+        score = eval_score(current_state, player)
     else:
         turn = player
         score = -turn
         for child_state in children:
-            result = symmetryInTree(child_state)
-            if type(result) == bool:
+            if npToTuple(child_state) not in Scores.keys():
                 minimax(child_state, -player, depth-1)
-                score = max(score,Scores[child_state]) if turn == COMP else min(score,Scores[child_state])
-            else :
-                score = max(score,Scores[result]) if turn == COMP else min(score,Scores[result])
-    Tree[current_state] = children
-    Scores[current_state] = score
+            score = max(score,Scores[npToTuple(child_state)]) if turn == COMP else min(score,Scores[npToTuple(child_state)])
+    Scores[npToTuple(current_state)] = score
+
+    return 
+            
 
 
 def print_board(state):
@@ -306,19 +317,19 @@ def main():
     global Start
     # Tree[Start] = 0
     # print(Tree)
-    print_board(Start)
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    #addMove(Start, 10, COMP)
-    print_board(Start)
-    print(eval_score(Start))
+    #print_board(Start)
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # #addMove(Start, 10, COMP)
+    # print_board(Start)
+    # print(eval_score(Start))
 
     # clist = children_states(Start,COMP)
     # print("children")
