@@ -317,33 +317,11 @@ def print_board(state):
             s+="|"
         print(s)
         print("*************************************************")
-    print("")
+    print("| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|\n")
 
 
 def main():
     global Start
-    # Tree[Start] = 0
-    # print(Tree)
-    #print_board(Start)
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # #addMove(Start, 10, COMP)
-    # print_board(Start)
-    # print(eval_score(Start))
-
-    # clist = children_states(Start,COMP)
-    # print("children")
-    # for c in clist:
-    #     print_board(c)
-
-
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
@@ -373,3 +351,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# TODO : timer 
+# TODO : eval_win avec dernier move 
