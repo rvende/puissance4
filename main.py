@@ -28,61 +28,39 @@ def children_states(state, player):
 
 #TODO verification sur le dernier mouvement
 def eval_win(state, player):
+
     #Victoire Horizontale
-    for i in range(0,HEIGHT):
-        countSame = 0
-        previous = 0
-        for j in range(0,WIDTH):
-            if state[i,j] == previous and previous != 0:
-                countSame+=1
-                if countSame == CONNECT-1:
-                    return previous
-            else :
-                countSame = 0
-                previous = state[i,j]
+    for i in range(HEIGHT):
+        if find(state[i], [player]*CONNECT):
+            return player
+        if find(state[i], [-player]*CONNECT):
+            return -player
+
 
     #Victoire Verticale
-    for j in range(0,WIDTH):
-        countSame = 0
-        previous = 0
-        for i in range(0,HEIGHT):
-            if state[i,j] == previous and previous != 0:
-                countSame+=1
-                if countSame == CONNECT-1:
-                    return previous
-            else :
-                countSame = 0
-                previous = state[i,j]
+    for i in range(WIDTH):
+        if find(state[:, i], [player]*CONNECT):
+            return player
+        if find(state[:, i], [-player]*CONNECT):
+            return -player
 
     #Victoire Diagonale
     #diagonale droite
     for i in range(-3,8):
         d = np.diag(state,i)
-        countSame = 0
-        previous = 0
-        for j in range(0, len(d)):
-            if d[j] == previous and previous != 0:
-                countSame+=1
-                if countSame == CONNECT-1:
-                    return previous
-            else :
-                countSame = 0
-                previous = d[j]
+        if find(d, [player]*CONNECT):
+            return player
+        if find(d, [-player]*CONNECT):
+            return -player
 
     # diagonale gauche
     stateT = verticalMirror(state)
     for i in range(-3, 8):
         d = np.diag(stateT,i)
-        countSame = 0
-        previous = 0
-        for j in range(0, len(d)):
-            if d[j] == previous and previous != 0:
-                countSame+=1
-                if countSame == CONNECT-1:
-                    return previous
-            else :
-                countSame = 0
-                previous = d[j]
+        if find(d, [player]*CONNECT):
+            return player
+        if find(d, [-player]*CONNECT):
+            return -player
 
 
     for i in range(0,WIDTH):
@@ -137,15 +115,20 @@ def eval_score(state):
         for idx in range(len(tabC)): 
             if find(state[i], tabC[idx]):
                 accu += tabC_score[idx]
+                print("Center")
 
         #Left
         for idx in range(len(tabL)):
             if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
                 accu += tabL_score[idx]
+                print("Left")
+
         #Right
         for idx in range(len(tabR)):
             if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
                 accu += tabR_score[idx]
+                print("Right")
+
 
 
 
@@ -266,14 +249,10 @@ def main():
     human_turn()
     human_turn()
     human_turn()
-    addMove(Start, 10, COMP)
+    human_turn()
     #addMove(Start, 10, COMP)
     print_board(Start)
-    tab = generateCenterCheck(HUMAN)
-    for e in tab: 
-        print(e)
-        print( find(Start[0], e) )
-    ##print(">>>>", eval_score(Start))
+    print(eval_score(Start))
 
     # clist = children_states(Start,COMP)
     # print("children")
