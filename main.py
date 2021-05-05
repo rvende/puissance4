@@ -129,6 +129,67 @@ def eval_score(state):
                 accu += tabR_score[idx]
                 print("Right")
 
+    #Vertical
+    for i in range(WIDTH):
+        for idx in range(len(tabC)): 
+            if find(state[:, i], tabC[idx]):
+                accu += tabC_score[idx]
+                print("V Center")
+
+        #Bottom
+        for idx in range(len(tabL)):
+            if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
+                accu += tabL_score[idx]
+                print("V Bottom")
+
+        #Up
+        for idx in range(len(tabR)):
+            if np.all( [ tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
+                accu += tabR_score[idx]
+                print("V Up")
+
+    #Diagonal
+    for i in range(-3,8):
+        d = np.diag(state,i)
+        for idx in range(len(tabC)): 
+            if find(d, tabC[idx]):
+                accu += tabC_score[idx]
+                print("D Center")
+
+        #Bottom
+        for idx in range(len(tabL)):
+            if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
+                accu += tabL_score[idx]
+                print("D Bottom")
+
+        #Up
+        for idx in range(len(tabR)):
+            if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
+                accu += tabR_score[idx]
+                print("D Up")
+
+
+    stateT = verticalMirror(state)
+    for i in range(-3, 8):
+        d = np.diag(stateT,i)
+        for idx in range(len(tabC)): 
+            if find(d, tabC[idx]):
+                accu += tabC_score[idx]
+                print("DG Center")
+
+        #Bottom
+        for idx in range(len(tabL)):
+            if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
+                accu += tabL_score[idx]
+                print("DG Bottom")
+
+        #Up
+        for idx in range(len(tabR)):
+            if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
+                accu += tabR_score[idx]
+                print("DG Up")
+
+
 
 
 
@@ -246,6 +307,11 @@ def main():
     # Tree[Start] = 0
     # print(Tree)
     print_board(Start)
+    human_turn()
+    human_turn()
+    human_turn()
+    human_turn()
+    human_turn()
     human_turn()
     human_turn()
     human_turn()
