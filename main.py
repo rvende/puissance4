@@ -3,12 +3,24 @@ from math import inf as infinity
 import copy
 import numpy as np
 
+
+#PUISSANCE 5 Grille 12*8
+
 COMP = 1
 HUMAN = -1
 
 def children_states(state, player):
-    pass
+    turn = player
+    children = []
+    for i in range(0,7):
+        if hasSpace(state,i) != 0:
+            tmp = state.copy()
+            addMove(tmp,i, player)
+            children.append(tmp)
+    return children
 
+
+#TODO verification sur le dernier mouvement
 def eval_win(state, player):
     #Victoire Horizontale
     for i in range(0,6):
@@ -39,7 +51,7 @@ def eval_win(state, player):
     #Victoire Diagonale
     #diagonale qui part de (2,0), (1,0), (0,0)
     for i in range(-2,6):
-        d = np.diag(Start,i)
+        d = np.diag(state,i)
         countSame = 0
         previous = 0
         for j in range(0,len(d)):
@@ -52,7 +64,7 @@ def eval_win(state, player):
                 previous = d[j]
 
     for i in range(0,7):
-        if (hasSpace(i) != 0):
+        if (hasSpace(state,i) != 0):
             return None
     return 0
 
@@ -61,49 +73,34 @@ Start = np.zeros((6,7))
 Tree = {}
 Scores = {}
 
-def score(state):
-    if wins(state, COMP):
-        score = +1
-        #print("Computer win")
-    elif wins(state, HUMAN):
-        score = -1
-        #print("Human win")
-    else:
-        score = 0
-        #print("NULL")
-
-    return score
-
-def hasSpace(col):
-    global Start
-    return (Start[:,col] == 0).sum()
+def hasSpace(state, col):
+    return (state[:,col] == 0).sum()
 
 
-def addMove(col, player):
-    global Start
+def addMove(state,col, player):
     for i in range(5,-1,-1):
-        if Start[i,col] != 0:
-            Start[i+1, col] = player
+        if state[i,col] != 0:
+            state[i+1, col] = player
             return
-    Start[0,col] = player
+    state[0,col] = player
 
 
 def human_turn():
     global Start
     move = -1
     print(f'Human turn ["O"]')
-    print_board()
+    print_board(Start)
 
     while move < 1 or move > 7:
         try:
             move = int(input('Choose column (1-7): '))
-            can_move = (hasSpace(move-1) != 0)
+            can_move = (hasSpace(Start,move-1) != 0)
 
             if not can_move:
                 print('Bad move')
                 move = -1
             else:
-                addMove(move-1, HUMAN)
+                addMove(Start,move-1, HUMAN)
         except (EOFError, KeyboardInterrupt):
             print('error')
             exit()
@@ -125,13 +122,13 @@ def choose_move():
 
 
 def ai_turn(): 
-    global board
+    global Start
     print(f'AI turn ["X"]')
-    print_board()
+    print_board(Start)
     choose_move()
 
 def verticalMirror(state):
-    return (state[2],state[1],state[0],state[5],state[4],state[3],state[8],state[7],state[6])
+    return state[:,::-1]
 
 def symmetryInTree(state):
     if state in Tree:
@@ -160,15 +157,14 @@ def minimax(current_state, player):
     Scores[current_state] = score
 
 
-def print_board():
-    global Start
+def print_board(state):
     print("*****************************")
     for x in range(5,-1,-1):
         s = "|"
         for y in range(0,7):
-            if Start[x,y] == 0:
+            if state[x,y] == 0:
                 s+="   "
-            elif Start[x,y] == COMP :
+            elif state[x,y] == COMP :
                 s+=" X "
             else:
                 s+=" O "
@@ -179,20 +175,24 @@ def print_board():
 
 
 def main():
-    print_board()
-    human_turn()
-    addMove(0,HUMAN)
-    addMove(1,COMP)
-    addMove(1,HUMAN)
-    addMove(2,COMP)
-    addMove(2,COMP)
-    addMove(2,HUMAN)
-    addMove(3,COMP)
-    addMove(3,COMP)
-    addMove(3,COMP)
-    addMove(3,HUMAN)
-    print_board()
-    print("result : ", eval_win(Start,HUMAN))
+    global Start
+    Tree[Start] = 0
+    print(Tree)
+    print_board(Start)
+    addMove(Start,0,HUMAN)
+    addMove(Start,0,HUMAN)
+    addMove(Start,0,HUMAN)
+    addMove(Start,0,HUMAN)
+    addMove(Start,0,HUMAN)
+    addMove(Start,0,HUMAN)
+    print_board(Start)
+    clist = children_states(Start,COMP)
+    print("children")
+    for c in clist:
+        print_board(c)
+
+
+
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
     while (firstPlayer!= 0 and firstPlayer!=1):
@@ -210,7 +210,7 @@ def main():
         ai_turn()
 
     print("\n Final board :")
-    print_board();
+    print_board(Start);
     score = eval_win(Start, COMP)
     if score == 1:
         print("AI win")
