@@ -73,9 +73,10 @@ def eval_win(state, player):
 def generateLeftCheck(player):
     tab = [
         [ player, player, player, player, 0],
-        [ player, player, player, 0, 0]
+        [ player, player, player, 0, 0],
+        [player, player, 0, 0, 0]
     ]
-    return tab, [2,1]
+    return tab, [3,2,1]
 
 def generateCenterCheck(player):
     tab = [
@@ -90,16 +91,21 @@ def generateCenterCheck(player):
         [player, 0, 0, player, player],
         [player, 0, player, 0, player],
         [player, 0, player, player, player],
-        [ player, player, player, 0, player]
+        [ player, player, player, 0, player],
+        [0, 0, player, player, 0],
+        [0, player, player, 0, 0],
+        [-player, player, player, 0, 0, 0],
+        [0, 0, 0, player, player, -player]
     ]
-    return tab, [4, 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4]
+    return tab, [4, 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4, 2, 2, 2, 2]
 
 def generateRightCheck(player):
     tab = [
         [ 0, player, player, player, player],
-        [ 0, 0, player, player, player]
+        [ 0, 0, player, player, player],
+        [ 0, 0, 0, player, player]
     ]
-    return tab, [2, 1]
+    return tab, [3, 2, 1]
 
 def find(line, subline):
     for i in range(len(line)-len(subline)):
