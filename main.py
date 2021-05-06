@@ -119,15 +119,19 @@ def eval_global_score(state):
 # def eval_score(state, player):
     # Find the longest coin chain 
     accu = 0
+    height = HEIGHT
 
     # Horizontale
     tabC, tabC_score = generateCenterCheck(COMP)
     tabL, tabL_score = generateLeftCheck(COMP)
     tabR, tabR_score = generateRightCheck(COMP)
 
+    countEmptyLines = 0
+
     for i in range(HEIGHT):
         #Center
-        if (state[i] != 0).sum() > 1:
+        nbElement = (state[i] != 0).sum()
+        if nbElement > 1:
             for idx in range(len(tabC)): 
                 if find(state[i], [ -1*i for i in tabC[idx] ] ):
                     accu -= tabC_score[idx]
@@ -150,10 +154,26 @@ def eval_global_score(state):
                 if np.all( [ [ -1*i for i in tabR[idx] ] == state[i,WIDTH-CONNECT:WIDTH] ] ):
                     accu -= tabR_score[idx]
                     #print("Right")
+        elif nbElement == 0:
+            countEmptyLines += 1
+            if countEmptyLines == 4:
+                height = i 
+                break
+
+    if height != HEIGHT:
+        state = state[:height, :]
+
+
+    leftCol = 0
+    rightCol = WIDTH-1
+    countEmptyColumn = 0
+    emptyColRight = False
 
     #Vertical
     for i in range(WIDTH):
-        if (state[:, i] != 0).sum() > 1:
+        nbElement = (state[:, i] != 0).sum()
+        if nbElement > 1:
+            countEmptyColumn = 0
 
             for idx in range(len(tabC)): 
                 if find(state[:, i], tabC[idx]):
@@ -169,17 +189,21 @@ def eval_global_score(state):
                 if np.all( [ [ -1*i for i in tabL[idx] ] == state[0:CONNECT, i] ] ):
                     accu -= tabL_score[idx]
                     #print("V Bottom")
+        elif nbElement == 0:
+            countEmptyColumn += 1
+            if countEmptyColumn >= 4 and i == countEmptyColumn:
+                leftCol = i
+                break
+            elif i == WIDTH-1 and countEmptyColumn >= 4:
+                rightCol = WIDTH - countEmptyColumn + 3
+        else: 
+            countEmptyColumn = 0
 
-            #Up
-            # for idx in range(len(tabR)):
-            #     if np.all( [ tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
-            #         accu += tabR_score[idx]
-            #     if np.all( [ -tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
-            #         accu -= tabR_score[idx]
-            #         #print("V Up")
+    if rightCol != WIDTH-1 or leftCol != 0:
+        state = state[:,leftCol: rightCol + 1]
 
     #Diagonal
-    for i in range(-3,8):
+    for i in range(CONNECT - height, width - CONNECT + 1):
         d = np.diag(state,i)
         if (d != 0).sum() > 1:
 
@@ -198,17 +222,9 @@ def eval_global_score(state):
                     accu -= tabL_score[idx]
                     #print("D Bottom")
 
-            #Up
-            # for idx in range(len(tabR)):
-            #     if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
-            #         accu += tabR_score[idx]
-            #     if np.all( [ -tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
-            #         accu -= tabR_score[idx]
-            #         #print("D Up")
-
 
     stateT = verticalMirror(state)
-    for i in range(-3, 8):
+    for i in range(CONNECT - height, width - CONNECT + 1):
         d = np.diag(stateT,i)
         if (d != 0).sum() > 1:
             for idx in range(len(tabC)): 
@@ -225,12 +241,6 @@ def eval_global_score(state):
                 if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
                     accu -= tabL_score[idx]
                     #print("DG Bottom")
-
-            #Up
-            # for idx in range(len(tabR)):
-            #     if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
-            #         accu += tabR_score[idx]
-            #         #print("DG Up")
 
     return accu
 
