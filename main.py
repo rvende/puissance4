@@ -160,10 +160,10 @@ def eval_global_score(state):
                 height = i 
                 break
 
-    print(">>>\n", state)
+    #print(">>>\n", state)
     if height != HEIGHT:
         state = state[:height, :]
-    print("<<<\n", state)
+    #print("<<<\n", state)
 
 
     leftCol = 0
@@ -206,7 +206,7 @@ def eval_global_score(state):
 
     if rightCol != WIDTH-1 or leftCol != 0:
         state = state[:, leftCol: rightCol + 1]
-    print("<<<\n", state)
+    #print("<<<\n", state)
 
     #Diagonal
     for i in range(CONNECT - height, width - CONNECT + 1):
@@ -378,12 +378,6 @@ def print_board(state):
 
 def main():
     global Start
-
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    eval_global_score(Start)
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
