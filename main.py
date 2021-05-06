@@ -9,7 +9,7 @@ import time
 COMP = 1
 HUMAN = -1
 
-DEPTH = 2
+DEPTH = 3
 HEIGHT = 8
 WIDTH = 12
 # Number of aligned coins to win
@@ -31,36 +31,30 @@ def eval_win(state, player):
 
     #Victoire Horizontale
     for i in range(HEIGHT):
-        if find(state[i], [player]*CONNECT):
-            return player
-        if find(state[i], [-player]*CONNECT):
-            return -player
+        wins = getLineWin(state[i])
+        if wins != 0:
+            return wins
 
 
     #Victoire Verticale
     for i in range(WIDTH):
-        if find(state[:, i], [player]*CONNECT):
-            return player
-        if find(state[:, i], [-player]*CONNECT):
-            return -player
+        wins = getLineWin(state[:, i])
+        if wins != 0:
+            return wins
 
     #Victoire Diagonale
-    #diagonale droite
+    stateT = verticalMirror(state)
     for i in range(-3,8):
         d = np.diag(state,i)
-        if find(d, [player]*CONNECT):
-            return player
-        if find(d, [-player]*CONNECT):
-            return -player
+        wins = getLineWin(d)
+        if wins != 0:
+            return wins
 
-    # diagonale gauche
-    stateT = verticalMirror(state)
-    for i in range(-3, 8):
+        #diag inversé
         d = np.diag(stateT,i)
-        if find(d, [player]*CONNECT):
-            return player
-        if find(d, [-player]*CONNECT):
-            return -player
+        wins = getLineWin(d)
+        if wins != 0:
+            return wins
 
 
     for i in range(0,WIDTH):
@@ -70,100 +64,117 @@ def eval_win(state, player):
     return 0
 
 
-def generateLeftCheck(player):
-    tab = [
-        [ player, player, player, player, 0],
-        [ player, player, player, 0, 0],
-        [ player, player, 0, 0, 0]
-    ]
-    return tab, [3,2,1]
-
 def generateCenterCheck(player):
     tab = [
-        [ 0, player, player, player, player, 0],
-        [ -player, player, player, player, player, 0],
-        [ 0, player, player, player, player, -player],
+
+        [ 0, 0, 0, player, player],
+        [ 0, 0, player, 0, player],
+        [ 0, 0, player, player, 0],
+        [ 0, player, 0, 0, player],
+        [ 0, player, 0, player, 0],
+        [ 0, player, player, 0, 0],
+        [ player, 0, 0, 0, player],
+        [ player, 0, 0, player, 0],
+        [ player, 0, player, 0, 0],
+        [ player, player, 0, 0, 0],
+
+        [ 0, 0, player, player, player],
+        [ 0, player, 0, player, player],
+        [ 0, player, player, 0, player],
         [ 0, player, player, player, 0],
-        [ -player, player, player, player, 0, 0],
-        [ 0, 0, player, player, player, -player],
-        [ player, player, 0, player, player],
-        [ player, player, 0, 0, player],
         [ player, 0, 0, player, player],
         [ player, 0, player, 0, player],
-        [ player, 0, player, player, player],
-        [ player, player, player, 0, player],
-        [ 0, 0, player, player, 0],
-        [ 0, player, player, 0, 0],
-        [ -player, player, player, 0, 0, 0],
-        [ 0, 0, 0, player, player, -player]
-    ]
-    return tab, [4, 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4, 2, 2, 2, 2]
+        [ player, 0, player, player, 0],
+        [ player, player, 0, 0, player],
+        [ player, player, 0, player, 0],
+        [ player, player, player, 0, 0],
 
-def generateRightCheck(player):
-    tab = [
         [ 0, player, player, player, player],
-        [ 0, 0, player, player, player],
-        [ 0, 0, 0, player, player]
+        [ player, 0, player, player, player],
+        [ player, player, 0, player, player],
+        [ player, player, player, 0, player],
+        [ player, player, player, player, 0]
     ]
-    return tab, [3, 2, 1]
+    return tab, ([1]*10 + [3]*10 + [5]*5)
 
 def find(line, subline):
-    for i in range(len(line)-len(subline)):
+    for i in range(len(line)-len(subline) + 1):
         if np.all( [subline == line[i:i+len(subline)]] ):
             return True
     return False
 
-def eval_global_score(state):
-#     return eval_score(state, COMP) - eval_score(state, HUMAN)
 
-# def eval_score(state, player):
-    # Find the longest coin chain 
+def eval_line(line):
+    global CONNECT
+    tabC, tabC_score = generateCenterCheck(COMP)
+    accu = 0
+
+    for idx in range(len(tabC)): 
+        if find(line, tabC[idx]):
+            accu += tabC_score[idx]
+
+    return accu
+
+
+def getLineWin(line):
+    linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
+    for l in linesC:
+        if len(l) != 0 and l[0] == HUMAN:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            if find(l, [COMP]*CONNECT):
+                return COMP
+
+    linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
+    for l in linesH:
+        if len(l) != 0 and l[0] == COMP:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            if find(l, [HUMAN]*CONNECT):
+                return HUMAN
+    return 0
+
+
+def getLineScore(line):
+    score = 0
+    linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
+    for l in linesC:
+        if len(l) != 0 and l[0] == HUMAN:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            score += dictScore[tuple(l)]
+
+    linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
+    for l in linesH:
+        if len(l) != 0 and l[0] == COMP:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            score -= dictScore[tuple(-l)]
+
+    return score
+
+
+def eval_global_score(state):
+
     accu = 0
     height = HEIGHT
 
-    # Horizontale
-    tabC, tabC_score = generateCenterCheck(COMP)
-    tabL, tabL_score = generateLeftCheck(COMP)
-    tabR, tabR_score = generateRightCheck(COMP)
-
+    # # Horizontale
     countEmptyLines = 0
-
     for i in range(HEIGHT):
-        #Center
         nbElement = (state[i] != 0).sum()
+
         if nbElement > 1:
-            for idx in range(len(tabC)): 
-                if find(state[i], [ -1*i for i in tabC[idx] ] ):
-                    accu -= tabC_score[idx]
-                if find(state[i], tabC[idx]):
-                    accu += tabC_score[idx]
-                    #print("Center")
+            accu += getLineScore(state[i]) 
 
-            #Left
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == state[i,0:CONNECT] ] ):
-                    accu -= tabL_score[idx]
-                    #print("Left")
-
-            #Right
-            for idx in range(len(tabR)):
-                if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-                    accu += tabR_score[idx]
-                if np.all( [ [ -1*i for i in tabR[idx] ] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-                    accu -= tabR_score[idx]
-                    #print("Right")
         elif nbElement == 0:
             countEmptyLines += 1
             if countEmptyLines == 4:
                 height = i 
                 break
 
-    #print(">>>\n", state)
     if height != HEIGHT:
         state = state[:height, :]
-    #print("<<<\n", state)
 
 
     leftCol = 0
@@ -176,22 +187,8 @@ def eval_global_score(state):
     for i in range(WIDTH):
         nbElement = (state[:, i] != 0).sum()
         if nbElement > 1:
-            countEmptyColumn = 0
+            accu += getLineScore(state[:, i])
 
-            for idx in range(len(tabC)): 
-                if find(state[:, i], tabC[idx]):
-                    accu += tabC_score[idx]
-                if find(state[:, i], [ -1*i for i in tabC[idx] ]):
-                    accu -= tabC_score[idx]
-                    #print("V Center")
-
-            #Bottom
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == state[0:CONNECT, i] ] ):
-                    accu -= tabL_score[idx]
-                    #print("V Bottom")
         elif nbElement == 0:
             countEmptyColumn += 1
             if countEmptyColumn >= 4 and i == countEmptyColumn:
@@ -206,49 +203,24 @@ def eval_global_score(state):
 
     if rightCol != WIDTH-1 or leftCol != 0:
         state = state[:, leftCol: rightCol + 1]
-    #print("<<<\n", state)
 
     #Diagonal
-    for i in range(CONNECT - height, width - CONNECT + 1):
-        d = np.diag(state,i)
-        if (d != 0).sum() > 1:
-
-            for idx in range(len(tabC)): 
-                if find(d, tabC[idx]):
-                    accu += tabC_score[idx]
-                if find(d, [ -1*i for i in tabC[idx] ]):
-                    accu -= tabC_score[idx]
-                    #print("D Center")
-
-            #Bottom
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
-                    accu -= tabL_score[idx]
-                    #print("D Bottom")
-
-
     stateT = verticalMirror(state)
     for i in range(CONNECT - height, width - CONNECT + 1):
+
+        d = np.diag(state,i)
+        if (d != 0).sum() > 1:
+            accu += getLineScore(d) 
+
+        # diag inversé
         d = np.diag(stateT,i)
         if (d != 0).sum() > 1:
-            for idx in range(len(tabC)): 
-                if find(d, tabC[idx]):
-                    accu += tabC_score[idx]
-                if find(d, [ -1*i for i in tabC[idx] ]):
-                    accu -= tabC_score[idx]
-                    #print("DG Center")
+            accu += getLineScore(d) 
 
-            #Bottom
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
-                    accu -= tabL_score[idx]
-                    #print("DG Bottom")
 
     return accu
+
+
 
 Start = np.zeros((HEIGHT,WIDTH))
 Tree = {}
@@ -259,7 +231,8 @@ def hasSpace(state, col):
 
 
 def addMove(state, col, player):
-    for i in range(5,-1,-1):
+    global HEIGHT
+    for i in range(HEIGHT - 1,-1,-1):
         if state[i,col] != 0:
             state[i+1, col] = player
             return
@@ -327,26 +300,13 @@ compteurMinimax = 0
 
 def minimax(current_state, player, depth):
     global Scores, compteurMinimax
-
     compteurMinimax += 1
-
-    # if compteurMinimax == 80:
-    #     t2 = time.time()
-    #     children = eval_win(current_state, player)
-    #     print("timer eval_win Mini {}".format(time.time()-t2))
-    # else:
     children = eval_win(current_state, player)
-
 
     if type(children) == int:
         score = children*infinity
     elif depth == 0:
-        #t0 = time.time()
         score = eval_global_score(current_state)
-        #print("timer eval_score Mini {}".format(time.time()-t0))
-    
-
-
     else:
         turn = player
         score = -turn
@@ -355,7 +315,6 @@ def minimax(current_state, player, depth):
                 minimax(child_state, -player, depth-1)
             score = max(score,Scores[npToTuple(child_state)]) if turn == COMP else min(score,Scores[npToTuple(child_state)])
     Scores[npToTuple(current_state)] = score
-    #print(">>>>", len(Scores)) 
             
 
 
@@ -376,8 +335,48 @@ def print_board(state):
     print("| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|\n")
 
 
+dictScore = {}
+
+def combiPossible(i):
+    result = []
+    if i == 1:
+        result.append([1])
+        result.append([0])
+    else : 
+        tmp = combiPossible(i-1)
+        for e in tmp: 
+            result.append( [1]  + e )
+            result.append( [0]  + e )
+    return result
+
+
+def preCalcul():
+    for i in range(CONNECT, WIDTH + 1):
+        possibilities = combiPossible(i)
+        for p in possibilities:
+            dictScore[tuple(p)] = eval_line(p)
+
+
 def main():
     global Start
+
+    t1 = time.time()
+    preCalcul()
+    print(" preCalcul {}".format(time.time() - t1))
+
+    # print(len(dictScore))
+    # addMove(Start, 5, COMP)
+
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # print_board(Start)
+    # print(eval_global_score(Start))
+    
+
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
@@ -409,5 +408,5 @@ if __name__ == '__main__':
     main()
 
 
-# TODO : timer 
+# TODO : revoir génération 
 # TODO : eval_win avec dernier move 
