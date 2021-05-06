@@ -113,18 +113,46 @@ def find(line, subline):
             return True
     return False
 
-def eval_global_score(state):
-#     return eval_score(state, COMP) - eval_score(state, HUMAN)
 
-# def eval_score(state, player):
-    # Find the longest coin chain 
-    accu = 0
-    height = HEIGHT
-
-    # Horizontale
+def eval_line(line):
+    global CONNECT
     tabC, tabC_score = generateCenterCheck(COMP)
     tabL, tabL_score = generateLeftCheck(COMP)
     tabR, tabR_score = generateRightCheck(COMP)
+    accu = 0
+
+    for idx in range(len(tabC)): 
+        if find(line, [ -1*i for i in tabC[idx] ] ):
+            accu -= tabC_score[idx]
+        if find(line, tabC[idx]):
+            accu += tabC_score[idx]
+
+    #Left
+    for idx in range(len(tabL)):
+        if np.all( [ tabL[idx] == line[0:CONNECT] ] ):
+            accu += tabL_score[idx]
+        if np.all( [ [ -1*i for i in tabL[idx] ] == line[0:CONNECT] ] ):
+            accu -= tabL_score[idx]
+
+    #Right
+    for idx in range(len(tabR)):
+        if np.all( [ tabR[idx] == line[ len(line)-CONNECT:len(line) ] ] ):
+            accu += tabR_score[idx]
+        if np.all( [ [ -1*i for i in tabR[idx] ] == line[len(line)-CONNECT:len(line)] ] ):
+            accu -= tabR_score[idx]
+
+    return accu
+
+
+def eval_global_score(state):
+
+    accu = 0
+    height = HEIGHT
+
+    # # Horizontale
+    # tabC, tabC_score = generateCenterCheck(COMP)
+    # tabL, tabL_score = generateLeftCheck(COMP)
+    # tabR, tabR_score = generateRightCheck(COMP)
 
     countEmptyLines = 0
 
@@ -132,28 +160,27 @@ def eval_global_score(state):
         #Center
         nbElement = (state[i] != 0).sum()
         if nbElement > 1:
-            for idx in range(len(tabC)): 
-                if find(state[i], [ -1*i for i in tabC[idx] ] ):
-                    accu -= tabC_score[idx]
-                if find(state[i], tabC[idx]):
-                    accu += tabC_score[idx]
-                    #print("Center")
+            accu += eval_line(state[i])
+            # for idx in range(len(tabC)): 
+            #     if find(state[i], [ -1*i for i in tabC[idx] ] ):
+            #         accu -= tabC_score[idx]
+            #     if find(state[i], tabC[idx]):
+            #         accu += tabC_score[idx]
 
-            #Left
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == state[i,0:CONNECT] ] ):
-                    accu -= tabL_score[idx]
-                    #print("Left")
+            # #Left
+            # for idx in range(len(tabL)):
+            #     if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
+            #         accu += tabL_score[idx]
+            #     if np.all( [ [ -1*i for i in tabL[idx] ] == state[i,0:CONNECT] ] ):
+            #         accu -= tabL_score[idx]
 
-            #Right
-            for idx in range(len(tabR)):
-                if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-                    accu += tabR_score[idx]
-                if np.all( [ [ -1*i for i in tabR[idx] ] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-                    accu -= tabR_score[idx]
-                    #print("Right")
+            # #Right
+            # for idx in range(len(tabR)):
+            #     if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
+            #         accu += tabR_score[idx]
+            #     if np.all( [ [ -1*i for i in tabR[idx] ] == state[i,WIDTH-CONNECT:WIDTH] ] ):
+            #         accu -= tabR_score[idx]
+            #         #print("Right")
         elif nbElement == 0:
             countEmptyLines += 1
             if countEmptyLines == 4:
@@ -178,20 +205,22 @@ def eval_global_score(state):
         if nbElement > 1:
             countEmptyColumn = 0
 
-            for idx in range(len(tabC)): 
-                if find(state[:, i], tabC[idx]):
-                    accu += tabC_score[idx]
-                if find(state[:, i], [ -1*i for i in tabC[idx] ]):
-                    accu -= tabC_score[idx]
-                    #print("V Center")
+            accu += eval_line(state[:, i])
 
-            #Bottom
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == state[0:CONNECT, i] ] ):
-                    accu -= tabL_score[idx]
-                    #print("V Bottom")
+            # for idx in range(len(tabC)): 
+            #     if find(state[:, i], tabC[idx]):
+            #         accu += tabC_score[idx]
+            #     if find(state[:, i], [ -1*i for i in tabC[idx] ]):
+            #         accu -= tabC_score[idx]
+            #         #print("V Center")
+
+            # #Bottom
+            # for idx in range(len(tabL)):
+            #     if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
+            #         accu += tabL_score[idx]
+            #     if np.all( [ [ -1*i for i in tabL[idx] ] == state[0:CONNECT, i] ] ):
+            #         accu -= tabL_score[idx]
+            #         #print("V Bottom")
         elif nbElement == 0:
             countEmptyColumn += 1
             if countEmptyColumn >= 4 and i == countEmptyColumn:
@@ -213,40 +242,45 @@ def eval_global_score(state):
         d = np.diag(state,i)
         if (d != 0).sum() > 1:
 
-            for idx in range(len(tabC)): 
-                if find(d, tabC[idx]):
-                    accu += tabC_score[idx]
-                if find(d, [ -1*i for i in tabC[idx] ]):
-                    accu -= tabC_score[idx]
-                    #print("D Center")
+            accu += eval_line(d)
 
-            #Bottom
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
-                    accu -= tabL_score[idx]
-                    #print("D Bottom")
+            # for idx in range(len(tabC)): 
+            #     if find(d, tabC[idx]):
+            #         accu += tabC_score[idx]
+            #     if find(d, [ -1*i for i in tabC[idx] ]):
+            #         accu -= tabC_score[idx]
+            #         #print("D Center")
+
+            # #Bottom
+            # for idx in range(len(tabL)):
+            #     if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
+            #         accu += tabL_score[idx]
+            #     if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
+            #         accu -= tabL_score[idx]
+            #         #print("D Bottom")
 
 
     stateT = verticalMirror(state)
     for i in range(CONNECT - height, width - CONNECT + 1):
         d = np.diag(stateT,i)
         if (d != 0).sum() > 1:
-            for idx in range(len(tabC)): 
-                if find(d, tabC[idx]):
-                    accu += tabC_score[idx]
-                if find(d, [ -1*i for i in tabC[idx] ]):
-                    accu -= tabC_score[idx]
-                    #print("DG Center")
 
-            #Bottom
-            for idx in range(len(tabL)):
-                if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-                    accu += tabL_score[idx]
-                if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
-                    accu -= tabL_score[idx]
-                    #print("DG Bottom")
+            accu += eval_line(d)
+            
+            # for idx in range(len(tabC)): 
+            #     if find(d, tabC[idx]):
+            #         accu += tabC_score[idx]
+            #     if find(d, [ -1*i for i in tabC[idx] ]):
+            #         accu -= tabC_score[idx]
+            #         #print("DG Center")
+
+            # #Bottom
+            # for idx in range(len(tabL)):
+            #     if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
+            #         accu += tabL_score[idx]
+            #     if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
+            #         accu -= tabL_score[idx]
+            #         #print("DG Bottom")
 
     return accu
 
@@ -374,6 +408,30 @@ def print_board(state):
         print(s)
         print("*************************************************")
     print("| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|\n")
+
+
+dictScore = {}
+
+def combiPossible(i):
+    result = []
+
+    if i == 1:
+        result.append([-1])
+        result.append([1])
+        result.append([0])
+    else : 
+        tmp = combiPossible(i-1)
+        for e in tmp: 
+            result.append( [-1] + e )
+            result.append( [1] + e )
+            result.append( [0] + e )
+    return result
+
+
+def preCalcul():
+    for i in range(5, 13):
+        tab = np.zeros(i)
+
 
 
 def main():
