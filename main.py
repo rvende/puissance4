@@ -154,7 +154,7 @@ def eval_global_score(state):
             for l in linesC:
                 if len(l) != 0 and l[0] == HUMAN:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu += dictScore[tuple(l)]
 
 
@@ -162,7 +162,7 @@ def eval_global_score(state):
             for l in linesH:
                 if len(l) != 0 and l[0] == COMP:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu -= dictScore[tuple(-l)]
 
         elif nbElement == 0:
@@ -190,7 +190,7 @@ def eval_global_score(state):
             for l in linesC:
                 if len(l) != 0 and l[0] == HUMAN:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu += dictScore[tuple(l)]
 
 
@@ -198,7 +198,7 @@ def eval_global_score(state):
             for l in linesH:
                 if len(l) != 0 and l[0] == COMP:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu -= dictScore[tuple(-l)]
 
 
@@ -225,7 +225,7 @@ def eval_global_score(state):
             for l in linesC:
                 if len(l) != 0 and l[0] == HUMAN:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu += dictScore[tuple(l)]
 
 
@@ -233,7 +233,7 @@ def eval_global_score(state):
             for l in linesH:
                 if len(l) != 0 and l[0] == COMP:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu -= dictScore[tuple(-l)]
 
 
@@ -245,7 +245,7 @@ def eval_global_score(state):
             for l in linesC:
                 if len(l) != 0 and l[0] == HUMAN:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu += dictScore[tuple(l)]
 
 
@@ -253,7 +253,7 @@ def eval_global_score(state):
             for l in linesH:
                 if len(l) != 0 and l[0] == COMP:
                     l = l[1:]
-                if len(l) >= 5:
+                if len(l) >= CONNECT:
                     accu -= dictScore[tuple(-l)]
     return accu
 
@@ -266,7 +266,8 @@ def hasSpace(state, col):
 
 
 def addMove(state, col, player):
-    for i in range(5,-1,-1):
+    global HEIGHT
+    for i in range(HEIGHT - 1,-1,-1):
         if state[i,col] != 0:
             state[i+1, col] = player
             return
@@ -399,7 +400,7 @@ def combiPossible(i):
 
 
 def preCalcul():
-    for i in range(5, 13):
+    for i in range(CONNECT, WIDTH + 1):
         possibilities = combiPossible(i)
         for p in possibilities:
             dictScore[tuple(p)] = eval_line(p)
@@ -410,17 +411,18 @@ def main():
 
 
     preCalcul()
-    print(len(dictScore))
-    addMove(Start, 5, COMP)
 
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    human_turn()
-    print_board(Start)
-    print(eval_global_score(Start))
+    # print(len(dictScore))
+    # addMove(Start, 5, COMP)
+
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # human_turn()
+    # print_board(Start)
+    # print(eval_global_score(Start))
     
 
 
