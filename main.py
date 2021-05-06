@@ -2,7 +2,7 @@
 from math import inf as infinity
 import copy
 import numpy as np
-
+import time
 
 #PUISSANCE 5 Grille 12*8
 
@@ -114,95 +114,123 @@ def find(line, subline):
     return False
 
 def eval_global_score(state):
-    return eval_score(state, COMP) - eval_score(state, HUMAN)
+#     return eval_score(state, COMP) - eval_score(state, HUMAN)
 
-def eval_score(state, player):
+# def eval_score(state, player):
     # Find the longest coin chain 
     accu = 0
 
     # Horizontale
-    tabC, tabC_score = generateCenterCheck(player)
-    tabL, tabL_score = generateLeftCheck(player)
-    tabR, tabR_score = generateRightCheck(player)
+    tabC, tabC_score = generateCenterCheck(COMP)
+    tabL, tabL_score = generateLeftCheck(COMP)
+    tabR, tabR_score = generateRightCheck(COMP)
 
     for i in range(HEIGHT):
         #Center
-        for idx in range(len(tabC)): 
-            if find(state[i], tabC[idx]):
-                accu += tabC_score[idx]
-                #print("Center")
+        if (state[i] != 0).sum() > 1:
+            for idx in range(len(tabC)): 
+                if find(state[i], [ -1*i for i in tabC[idx] ] ):
+                    accu -= tabC_score[idx]
+                if find(state[i], tabC[idx]):
+                    accu += tabC_score[idx]
+                    #print("Center")
 
-        #Left
-        for idx in range(len(tabL)):
-            if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
-                accu += tabL_score[idx]
-                #print("Left")
+            #Left
+            for idx in range(len(tabL)):
+                if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
+                    accu += tabL_score[idx]
+                if np.all( [ [ -1*i for i in tabL[idx] ] == state[i,0:CONNECT] ] ):
+                    accu -= tabL_score[idx]
+                    #print("Left")
 
-        #Right
-        for idx in range(len(tabR)):
-            if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-                accu += tabR_score[idx]
-                #print("Right")
+            #Right
+            for idx in range(len(tabR)):
+                if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
+                    accu += tabR_score[idx]
+                if np.all( [ [ -1*i for i in tabR[idx] ] == state[i,WIDTH-CONNECT:WIDTH] ] ):
+                    accu -= tabR_score[idx]
+                    #print("Right")
 
     #Vertical
     for i in range(WIDTH):
-        for idx in range(len(tabC)): 
-            if find(state[:, i], tabC[idx]):
-                accu += tabC_score[idx]
-                #print("V Center")
+        if (state[:, i] != 0).sum() > 1:
 
-        #Bottom
-        for idx in range(len(tabL)):
-            if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
-                accu += tabL_score[idx]
-                #print("V Bottom")
+            for idx in range(len(tabC)): 
+                if find(state[:, i], tabC[idx]):
+                    accu += tabC_score[idx]
+                if find(state[:, i], [ -1*i for i in tabC[idx] ]):
+                    accu -= tabC_score[idx]
+                    #print("V Center")
 
-        #Up
-        for idx in range(len(tabR)):
-            if np.all( [ tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
-                accu += tabR_score[idx]
-                #print("V Up")
+            #Bottom
+            for idx in range(len(tabL)):
+                if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
+                    accu += tabL_score[idx]
+                if np.all( [ [ -1*i for i in tabL[idx] ] == state[0:CONNECT, i] ] ):
+                    accu -= tabL_score[idx]
+                    #print("V Bottom")
+
+            #Up
+            # for idx in range(len(tabR)):
+            #     if np.all( [ tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
+            #         accu += tabR_score[idx]
+            #     if np.all( [ -tabR[idx] == state[HEIGHT-CONNECT:HEIGHT, i] ] ):
+            #         accu -= tabR_score[idx]
+            #         #print("V Up")
 
     #Diagonal
     for i in range(-3,8):
         d = np.diag(state,i)
-        for idx in range(len(tabC)): 
-            if find(d, tabC[idx]):
-                accu += tabC_score[idx]
-                #print("D Center")
+        if (d != 0).sum() > 1:
 
-        #Bottom
-        for idx in range(len(tabL)):
-            if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-                accu += tabL_score[idx]
-                #print("D Bottom")
+            for idx in range(len(tabC)): 
+                if find(d, tabC[idx]):
+                    accu += tabC_score[idx]
+                if find(d, [ -1*i for i in tabC[idx] ]):
+                    accu -= tabC_score[idx]
+                    #print("D Center")
 
-        #Up
-        for idx in range(len(tabR)):
-            if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
-                accu += tabR_score[idx]
-                #print("D Up")
+            #Bottom
+            for idx in range(len(tabL)):
+                if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
+                    accu += tabL_score[idx]
+                if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
+                    accu -= tabL_score[idx]
+                    #print("D Bottom")
+
+            #Up
+            # for idx in range(len(tabR)):
+            #     if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
+            #         accu += tabR_score[idx]
+            #     if np.all( [ -tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
+            #         accu -= tabR_score[idx]
+            #         #print("D Up")
 
 
     stateT = verticalMirror(state)
     for i in range(-3, 8):
         d = np.diag(stateT,i)
-        for idx in range(len(tabC)): 
-            if find(d, tabC[idx]):
-                accu += tabC_score[idx]
-                #print("DG Center")
+        if (d != 0).sum() > 1:
+            for idx in range(len(tabC)): 
+                if find(d, tabC[idx]):
+                    accu += tabC_score[idx]
+                if find(d, [ -1*i for i in tabC[idx] ]):
+                    accu -= tabC_score[idx]
+                    #print("DG Center")
 
-        #Bottom
-        for idx in range(len(tabL)):
-            if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-                accu += tabL_score[idx]
-                #print("DG Bottom")
+            #Bottom
+            for idx in range(len(tabL)):
+                if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
+                    accu += tabL_score[idx]
+                if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
+                    accu -= tabL_score[idx]
+                    #print("DG Bottom")
 
-        #Up
-        for idx in range(len(tabR)):
-            if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
-                accu += tabR_score[idx]
-                #print("DG Up")
+            #Up
+            # for idx in range(len(tabR)):
+            #     if np.all( [ tabR[idx] == d[len(d)-CONNECT:len(d)] ] ):
+            #         accu += tabR_score[idx]
+            #         #print("DG Up")
 
     return accu
 
@@ -262,19 +290,16 @@ def ai_turn():
     print(f'AI turn ["X"]')
     print_board(Start)
     Scores = {}
+    t0 = time.time()
     minimax(Start, COMP, DEPTH)
+    t1 = time.time()
+    print(">>>timer minimax {}".format(t1-t0))
     choose_move()
+    print(">>>>timer choose_move {}".format(time.time()-t1))
     print(len(Scores))
 
 def verticalMirror(state):
     return state[:,::-1]
-
-# def symmetryInTree(state):
-#     if state in Tree:
-#         return state
-#     if verticalMirror(state) in Tree:
-#         return verticalMirror(state)
-#     return False
 
 def npToTuple(state):
     return tuple(map(tuple, state))
@@ -282,15 +307,30 @@ def npToTuple(state):
 def tupleToNp(tuple_):
     return np.asarray(tuple_)
 
-def minimax(current_state, player, depth):
-    global Scores
+compteurMinimax = 0
 
+def minimax(current_state, player, depth):
+    global Scores, compteurMinimax
+
+    compteurMinimax += 1
+
+    # if compteurMinimax == 80:
+    #     t2 = time.time()
+    #     children = eval_win(current_state, player)
+    #     print("timer eval_win Mini {}".format(time.time()-t2))
+    # else:
     children = eval_win(current_state, player)
+
 
     if type(children) == int:
         score = children*infinity
     elif depth == 0:
+        #t0 = time.time()
         score = eval_global_score(current_state)
+        #print("timer eval_score Mini {}".format(time.time()-t0))
+    
+
+
     else:
         turn = player
         score = -turn
