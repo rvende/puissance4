@@ -31,36 +31,30 @@ def eval_win(state, player):
 
     #Victoire Horizontale
     for i in range(HEIGHT):
-        if find(state[i], [player]*CONNECT):
-            return player
-        if find(state[i], [-player]*CONNECT):
-            return -player
+        wins = getLineWin(state[i])
+        if wins != 0:
+            return wins
 
 
     #Victoire Verticale
     for i in range(WIDTH):
-        if find(state[:, i], [player]*CONNECT):
-            return player
-        if find(state[:, i], [-player]*CONNECT):
-            return -player
+        wins = getLineWin(state[:, i])
+        if wins != 0:
+            return wins
 
     #Victoire Diagonale
-    #diagonale droite
+    stateT = verticalMirror(state)
     for i in range(-3,8):
         d = np.diag(state,i)
-        if find(d, [player]*CONNECT):
-            return player
-        if find(d, [-player]*CONNECT):
-            return -player
+        wins = getLineWin(d)
+        if wins != 0:
+            return wins
 
-    # diagonale gauche
-    stateT = verticalMirror(state)
-    for i in range(-3, 8):
+        #diag inversé
         d = np.diag(stateT,i)
-        if find(d, [player]*CONNECT):
-            return player
-        if find(d, [-player]*CONNECT):
-            return -player
+        wins = getLineWin(d)
+        if wins != 0:
+            return wins
 
 
     for i in range(0,WIDTH):
@@ -69,14 +63,6 @@ def eval_win(state, player):
     
     return 0
 
-
-# def generateLeftCheck(player):
-#     tab = [
-#         [ player, player, player, player, 0],
-#         [ player, player, player, 0, 0],
-#         [ player, player, 0, 0, 0]
-#     ]
-#     return tab, [3,2,1]
 
 def generateCenterCheck(player):
     tab = [
@@ -111,14 +97,6 @@ def generateCenterCheck(player):
     ]
     return tab, ([2]*10 + [3]*10 + [4]*5)
 
-# def generateRightCheck(player):
-#     tab = [
-#         [ 0, player, player, player, player],
-#         [ 0, 0, player, player, player],
-#         [ 0, 0, 0, player, player]
-#     ]
-#     return tab, [3, 2, 1]
-
 def find(line, subline):
     for i in range(len(line)-len(subline) + 1):
         if np.all( [subline == line[i:i+len(subline)]] ):
@@ -138,6 +116,43 @@ def eval_line(line):
     return accu
 
 
+def getLineWin(line):
+    linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
+    for l in linesC:
+        if len(l) != 0 and l[0] == HUMAN:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            if find(l, [COMP]*CONNECT):
+                return COMP
+
+    linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
+    for l in linesH:
+        if len(l) != 0 and l[0] == COMP:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            if find(l, [HUMAN]*CONNECT):
+                return HUMAN
+    return 0
+
+
+def getLineScore(line):
+    score = 0
+    linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
+    for l in linesC:
+        if len(l) != 0 and l[0] == HUMAN:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            score += dictScore[tuple(l)]
+
+    linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
+    for l in linesH:
+        if len(l) != 0 and l[0] == COMP:
+            l = l[1:]
+        if len(l) >= CONNECT:
+            score -= dictScore[tuple(-l)]
+
+    return score
+
 
 def eval_global_score(state):
 
@@ -148,22 +163,9 @@ def eval_global_score(state):
     countEmptyLines = 0
     for i in range(HEIGHT):
         nbElement = (state[i] != 0).sum()
+
         if nbElement > 1:
-
-            linesC = np.split(state[i], np.asarray(state[i] == HUMAN).nonzero()[0])
-            for l in linesC:
-                if len(l) != 0 and l[0] == HUMAN:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu += dictScore[tuple(l)]
-
-
-            linesH = np.split(state[i], np.asarray(state[i] == COMP).nonzero()[0])
-            for l in linesH:
-                if len(l) != 0 and l[0] == COMP:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu -= dictScore[tuple(-l)]
+            accu += getLineScore(state[i]) 
 
         elif nbElement == 0:
             countEmptyLines += 1
@@ -185,22 +187,7 @@ def eval_global_score(state):
     for i in range(WIDTH):
         nbElement = (state[:, i] != 0).sum()
         if nbElement > 1:
-
-            linesC = np.split(state[:, i], np.asarray(state[:, i] == HUMAN).nonzero()[0])
-            for l in linesC:
-                if len(l) != 0 and l[0] == HUMAN:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu += dictScore[tuple(l)]
-
-
-            linesH = np.split(state[:, i], np.asarray(state[:, i] == COMP).nonzero()[0])
-            for l in linesH:
-                if len(l) != 0 and l[0] == COMP:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu -= dictScore[tuple(-l)]
-
+            accu += getLineScore(state[:, i])
 
         elif nbElement == 0:
             countEmptyColumn += 1
@@ -218,44 +205,22 @@ def eval_global_score(state):
         state = state[:, leftCol: rightCol + 1]
 
     #Diagonal
-    for i in range(CONNECT - height, width - CONNECT + 1):
-        d = np.diag(state,i)
-        if (d != 0).sum() > 1:
-            linesC = np.split(d, np.asarray(d == HUMAN).nonzero()[0])
-            for l in linesC:
-                if len(l) != 0 and l[0] == HUMAN:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu += dictScore[tuple(l)]
-
-
-            linesH = np.split(d, np.asarray(d == COMP).nonzero()[0])
-            for l in linesH:
-                if len(l) != 0 and l[0] == COMP:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu -= dictScore[tuple(-l)]
-
-
     stateT = verticalMirror(state)
     for i in range(CONNECT - height, width - CONNECT + 1):
+
+        d = np.diag(state,i)
+        if (d != 0).sum() > 1:
+            accu += getLineScore(d) 
+
+        # diag inversé
         d = np.diag(stateT,i)
         if (d != 0).sum() > 1:
-            linesC = np.split(d, np.asarray(d == HUMAN).nonzero()[0])
-            for l in linesC:
-                if len(l) != 0 and l[0] == HUMAN:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu += dictScore[tuple(l)]
+            accu += getLineScore(d) 
 
 
-            linesH = np.split(d, np.asarray(d == COMP).nonzero()[0])
-            for l in linesH:
-                if len(l) != 0 and l[0] == COMP:
-                    l = l[1:]
-                if len(l) >= CONNECT:
-                    accu -= dictScore[tuple(-l)]
     return accu
+
+
 
 Start = np.zeros((HEIGHT,WIDTH))
 Tree = {}
@@ -335,26 +300,13 @@ compteurMinimax = 0
 
 def minimax(current_state, player, depth):
     global Scores, compteurMinimax
-
     compteurMinimax += 1
-
-    # if compteurMinimax == 80:
-    #     t2 = time.time()
-    #     children = eval_win(current_state, player)
-    #     print("timer eval_win Mini {}".format(time.time()-t2))
-    # else:
     children = eval_win(current_state, player)
-
 
     if type(children) == int:
         score = children*infinity
     elif depth == 0:
-        #t0 = time.time()
         score = eval_global_score(current_state)
-        #print("timer eval_score Mini {}".format(time.time()-t0))
-    
-
-
     else:
         turn = player
         score = -turn
@@ -363,7 +315,6 @@ def minimax(current_state, player, depth):
                 minimax(child_state, -player, depth-1)
             score = max(score,Scores[npToTuple(child_state)]) if turn == COMP else min(score,Scores[npToTuple(child_state)])
     Scores[npToTuple(current_state)] = score
-    #print(">>>>", len(Scores)) 
             
 
 
