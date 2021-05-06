@@ -152,66 +152,76 @@ def eval_global_score(state):
     height = HEIGHT
 
     # # Horizontale
-
     countEmptyLines = 0
-
     for i in range(HEIGHT):
-        #Center
         nbElement = (state[i] != 0).sum()
         if nbElement > 1:
-            accu += eval_line(state[i], True)
+
+            linesC = np.split(state[i], np.asarray(state[i] == HUMAN).nonzero()[0])
+            for l in linesC:
+                if len(l) != 0 and l[0] == HUMAN:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu += dictScore[tuple(l)]
+
+
+            linesH = np.split(state[i], np.asarray(state[i] == COMP).nonzero()[0])
+            for l in linesH:
+                if len(l) != 0 and l[0] == COMP:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu -= dictScore[tuple(-l)]
+
         elif nbElement == 0:
             countEmptyLines += 1
             if countEmptyLines == 4:
                 height = i 
                 break
 
-    #print(">>>\n", state)
     if height != HEIGHT:
         state = state[:height, :]
-    #print("<<<\n", state)
 
 
-    leftCol = 0
-    rightCol = WIDTH-1
-    countEmptyColumn = 0
-    emptyColRight = False
+    # leftCol = 0
+    # rightCol = WIDTH-1
+    # countEmptyColumn = 0
+    # emptyColRight = False
 
 
-    #Vertical
-    for i in range(WIDTH):
-        nbElement = (state[:, i] != 0).sum()
-        if nbElement > 1:
-            countEmptyColumn = 0
-            accu += eval_line(state[:, i])
+    # #Vertical
+    # for i in range(WIDTH):
+    #     nbElement = (state[:, i] != 0).sum()
+    #     if nbElement > 1:
+    #         countEmptyColumn = 0
+    #         accu += eval_line(state[:, i])
 
-        elif nbElement == 0:
-            countEmptyColumn += 1
-            if countEmptyColumn >= 4 and i == countEmptyColumn:
-                leftCol = i
-                break
-            elif i == WIDTH-1 and countEmptyColumn >= 4:
-                rightCol = WIDTH -1 - countEmptyColumn + 3
-        else: 
-            countEmptyColumn = 0
+    #     elif nbElement == 0:
+    #         countEmptyColumn += 1
+    #         if countEmptyColumn >= 4 and i == countEmptyColumn:
+    #             leftCol = i
+    #             break
+    #         elif i == WIDTH-1 and countEmptyColumn >= 4:
+    #             rightCol = WIDTH -1 - countEmptyColumn + 3
+    #     else: 
+    #         countEmptyColumn = 0
 
-    width = rightCol + 1 - leftCol
+    # width = rightCol + 1 - leftCol
 
-    if rightCol != WIDTH-1 or leftCol != 0:
-        state = state[:, leftCol: rightCol + 1]
-    #print("<<<\n", state)
+    # if rightCol != WIDTH-1 or leftCol != 0:
+    #     state = state[:, leftCol: rightCol + 1]
+    # #print("<<<\n", state)
 
-    #Diagonal
-    for i in range(CONNECT - height, width - CONNECT + 1):
-        d = np.diag(state,i)
-        if (d != 0).sum() > 1:
-            accu += eval_line(d)
+    # #Diagonal
+    # for i in range(CONNECT - height, width - CONNECT + 1):
+    #     d = np.diag(state,i)
+    #     if (d != 0).sum() > 1:
+    #         accu += eval_line(d)
 
-    stateT = verticalMirror(state)
-    for i in range(CONNECT - height, width - CONNECT + 1):
-        d = np.diag(stateT,i)
-        if (d != 0).sum() > 1:
-            accu += eval_line(d)
+    # stateT = verticalMirror(state)
+    # for i in range(CONNECT - height, width - CONNECT + 1):
+    #     d = np.diag(stateT,i)
+    #     if (d != 0).sum() > 1:
+    #         accu += eval_line(d)
 
     return accu
 
@@ -358,24 +368,24 @@ def combiPossible(i):
 
 def preCalcul():
     for i in range(5, 13):
-        print(i)
-        t = time.time()
         possibilities = combiPossible(i)
-        t1 = time.time()
         for p in possibilities:
             dictScore[tuple(p)] = eval_line(p, True)
-
-
-
-
 
 
 def main():
     global Start
 
-
     preCalcul()
     print(len(dictScore))
+
+    human_turn()
+    human_turn()
+    human_turn()
+
+    print(eval_global_score(Start))
+    
+
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
