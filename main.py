@@ -70,77 +70,70 @@ def eval_win(state, player):
     return 0
 
 
-def generateLeftCheck(player):
-    tab = [
-        [ player, player, player, player, 0],
-        [ player, player, player, 0, 0],
-        [ player, player, 0, 0, 0]
-    ]
-    return tab, [3,2,1]
+# def generateLeftCheck(player):
+#     tab = [
+#         [ player, player, player, player, 0],
+#         [ player, player, player, 0, 0],
+#         [ player, player, 0, 0, 0]
+#     ]
+#     return tab, [3,2,1]
 
 def generateCenterCheck(player):
     tab = [
-        [ 0, player, player, player, player, 0],
-        [ -player, player, player, player, player, 0],
-        [ 0, player, player, player, player, -player],
+
+        [ 0, 0, 0, player, player],
+        [ 0, 0, player, 0, player],
+        [ 0, 0, player, player, 0],
+        [ 0, player, 0, 0, player],
+        [ 0, player, 0, player, 0],
+        [ 0, player, player, 0, 0],
+        [ player, 0, 0, 0, player],
+        [ player, 0, 0, player, 0],
+        [ player, 0, player, 0, 0],
+        [ player, player, 0, 0, 0],
+
+        [ 0, 0, player, player, player],
+        [ 0, player, 0, player, player],
+        [ 0, player, player, 0, player],
         [ 0, player, player, player, 0],
-        [ -player, player, player, player, 0, 0],
-        [ 0, 0, player, player, player, -player],
-        [ player, player, 0, player, player],
-        [ player, player, 0, 0, player],
         [ player, 0, 0, player, player],
         [ player, 0, player, 0, player],
-        [ player, 0, player, player, player],
-        [ player, player, player, 0, player],
-        [ 0, 0, player, player, 0],
-        [ 0, player, player, 0, 0],
-        [ -player, player, player, 0, 0, 0],
-        [ 0, 0, 0, player, player, -player]
-    ]
-    return tab, [4, 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4, 2, 2, 2, 2]
+        [ player, 0, player, player, 0],
+        [ player, player, 0, 0, player],
+        [ player, player, 0, player, 0],
+        [ player, player, player, 0, 0],
 
-def generateRightCheck(player):
-    tab = [
         [ 0, player, player, player, player],
-        [ 0, 0, player, player, player],
-        [ 0, 0, 0, player, player]
+        [ player, 0, player, player, player],
+        [ player, player, 0, player, player],
+        [ player, player, player, 0, player],
+        [ player, player, player, player, 0]
     ]
-    return tab, [3, 2, 1]
+    return tab, ([2]*10 + [3]*10 + [4]*5)
+
+# def generateRightCheck(player):
+#     tab = [
+#         [ 0, player, player, player, player],
+#         [ 0, 0, player, player, player],
+#         [ 0, 0, 0, player, player]
+#     ]
+#     return tab, [3, 2, 1]
 
 def find(line, subline):
-    for i in range(len(line)-len(subline)):
+    for i in range(len(line)-len(subline) + 1):
         if np.all( [subline == line[i:i+len(subline)]] ):
             return True
     return False
 
 
-def eval_line(line, checkRight = False):
+def eval_line(line):
     global CONNECT
     tabC, tabC_score = generateCenterCheck(COMP)
-    tabL, tabL_score = generateLeftCheck(COMP)
-    tabR, tabR_score = generateRightCheck(COMP)
     accu = 0
 
     for idx in range(len(tabC)): 
-        if find(line, [ -1*i for i in tabC[idx] ] ):
-            accu -= tabC_score[idx]
         if find(line, tabC[idx]):
             accu += tabC_score[idx]
-
-    #Left
-    for idx in range(len(tabL)):
-        if np.all( [ tabL[idx] == line[0:CONNECT] ] ):
-            accu += tabL_score[idx]
-        if np.all( [ [ -1*i for i in tabL[idx] ] == line[0:CONNECT] ] ):
-            accu -= tabL_score[idx]
-
-    #Right
-    if checkRight :
-        for idx in range(len(tabR)):
-            if np.all( [ tabR[idx] == line[ len(line)-CONNECT:len(line) ] ] ):
-                accu += tabR_score[idx]
-            if np.all( [ [ -1*i for i in tabR[idx] ] == line[len(line)-CONNECT:len(line)] ] ):
-                accu -= tabR_score[idx]
 
     return accu
 
@@ -182,47 +175,86 @@ def eval_global_score(state):
         state = state[:height, :]
 
 
-    # leftCol = 0
-    # rightCol = WIDTH-1
-    # countEmptyColumn = 0
-    # emptyColRight = False
+    leftCol = 0
+    rightCol = WIDTH-1
+    countEmptyColumn = 0
+    emptyColRight = False
 
 
-    # #Vertical
-    # for i in range(WIDTH):
-    #     nbElement = (state[:, i] != 0).sum()
-    #     if nbElement > 1:
-    #         countEmptyColumn = 0
-    #         accu += eval_line(state[:, i])
+    #Vertical
+    for i in range(WIDTH):
+        nbElement = (state[:, i] != 0).sum()
+        if nbElement > 1:
 
-    #     elif nbElement == 0:
-    #         countEmptyColumn += 1
-    #         if countEmptyColumn >= 4 and i == countEmptyColumn:
-    #             leftCol = i
-    #             break
-    #         elif i == WIDTH-1 and countEmptyColumn >= 4:
-    #             rightCol = WIDTH -1 - countEmptyColumn + 3
-    #     else: 
-    #         countEmptyColumn = 0
+            linesC = np.split(state[:, i], np.asarray(state[:, i] == HUMAN).nonzero()[0])
+            for l in linesC:
+                if len(l) != 0 and l[0] == HUMAN:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu += dictScore[tuple(l)]
 
-    # width = rightCol + 1 - leftCol
 
-    # if rightCol != WIDTH-1 or leftCol != 0:
-    #     state = state[:, leftCol: rightCol + 1]
-    # #print("<<<\n", state)
+            linesH = np.split(state[:, i], np.asarray(state[:, i] == COMP).nonzero()[0])
+            for l in linesH:
+                if len(l) != 0 and l[0] == COMP:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu -= dictScore[tuple(-l)]
 
-    # #Diagonal
-    # for i in range(CONNECT - height, width - CONNECT + 1):
-    #     d = np.diag(state,i)
-    #     if (d != 0).sum() > 1:
-    #         accu += eval_line(d)
 
-    # stateT = verticalMirror(state)
-    # for i in range(CONNECT - height, width - CONNECT + 1):
-    #     d = np.diag(stateT,i)
-    #     if (d != 0).sum() > 1:
-    #         accu += eval_line(d)
+        elif nbElement == 0:
+            countEmptyColumn += 1
+            if countEmptyColumn >= 4 and i == countEmptyColumn:
+                leftCol = i
+                break
+            elif i == WIDTH-1 and countEmptyColumn >= 4:
+                rightCol = WIDTH -1 - countEmptyColumn + 3
+        else: 
+            countEmptyColumn = 0
 
+    width = rightCol + 1 - leftCol
+
+    if rightCol != WIDTH-1 or leftCol != 0:
+        state = state[:, leftCol: rightCol + 1]
+
+    #Diagonal
+    for i in range(CONNECT - height, width - CONNECT + 1):
+        d = np.diag(state,i)
+        if (d != 0).sum() > 1:
+            linesC = np.split(d, np.asarray(d == HUMAN).nonzero()[0])
+            for l in linesC:
+                if len(l) != 0 and l[0] == HUMAN:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu += dictScore[tuple(l)]
+
+
+            linesH = np.split(d, np.asarray(d == COMP).nonzero()[0])
+            for l in linesH:
+                if len(l) != 0 and l[0] == COMP:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu -= dictScore[tuple(-l)]
+
+
+    stateT = verticalMirror(state)
+    for i in range(CONNECT - height, width - CONNECT + 1):
+        d = np.diag(stateT,i)
+        if (d != 0).sum() > 1:
+            linesC = np.split(d, np.asarray(d == HUMAN).nonzero()[0])
+            for l in linesC:
+                if len(l) != 0 and l[0] == HUMAN:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu += dictScore[tuple(l)]
+
+
+            linesH = np.split(d, np.asarray(d == COMP).nonzero()[0])
+            for l in linesH:
+                if len(l) != 0 and l[0] == COMP:
+                    l = l[1:]
+                if len(l) >= 5:
+                    accu -= dictScore[tuple(-l)]
     return accu
 
 Start = np.zeros((HEIGHT,WIDTH))
@@ -370,19 +402,24 @@ def preCalcul():
     for i in range(5, 13):
         possibilities = combiPossible(i)
         for p in possibilities:
-            dictScore[tuple(p)] = eval_line(p, True)
+            dictScore[tuple(p)] = eval_line(p)
 
 
 def main():
     global Start
 
+
     preCalcul()
     print(len(dictScore))
+    addMove(Start, 5, COMP)
 
     human_turn()
     human_turn()
     human_turn()
-
+    human_turn()
+    human_turn()
+    human_turn()
+    print_board(Start)
     print(eval_global_score(Start))
     
 
@@ -417,5 +454,5 @@ if __name__ == '__main__':
     main()
 
 
-# TODO : timer 
+# TODO : revoir génération 
 # TODO : eval_win avec dernier move 
