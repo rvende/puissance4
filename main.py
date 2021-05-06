@@ -3,13 +3,14 @@ from math import inf as infinity
 import copy
 import numpy as np
 import time
+import itertools as it
 
 #PUISSANCE 5 Grille 12*8
 
 COMP = 1
 HUMAN = -1
 
-DEPTH = 3
+DEPTH = 2
 HEIGHT = 8
 WIDTH = 12
 # Number of aligned coins to win
@@ -26,22 +27,31 @@ def children_states(state, player):
     return children
 
 
+tH, tV, tD, tC = 0, 0, 0, 0
 #TODO verification sur le dernier mouvement
 def eval_win(state, player):
 
+    global tH, tV, tD, tC
+
+    t1 = time.time()
     #Victoire Horizontale
     for i in range(HEIGHT):
         wins = getLineWin(state[i])
         if wins != 0:
             return wins
+    tH += time.time() - t1
+    
 
-
+    t1 = time.time()
     #Victoire Verticale
     for i in range(WIDTH):
         wins = getLineWin(state[:, i])
         if wins != 0:
             return wins
+    tV += time.time() - t1
 
+
+    t1 = time.time()
     #Victoire Diagonale
     stateT = verticalMirror(state)
     for i in range(-3,8):
@@ -55,11 +65,17 @@ def eval_win(state, player):
         wins = getLineWin(d)
         if wins != 0:
             return wins
+    tD += time.time() - t1
 
 
+    t1 = time.time()
     for i in range(0,WIDTH):
         if (hasSpace(state,i) != 0):
-            return children_states(state, player)
+            tmp = children_states(state, player)
+            tC += time.time() - t1
+            return tmp
+    
+
     
     return 0
 
@@ -281,6 +297,8 @@ def ai_turn():
     Scores = {}
     t0 = time.time()
     minimax(Start, COMP, DEPTH)
+    print(" --->>> total time  eval_global_score {}   eval_win {} ".format(tScore, tWin))
+    print(" --->>> total time  tH {}   tV {} tD {}   \ntC {} ".format(tH, tV, tD, tC))
     t1 = time.time()
     print(">>>timer minimax {}".format(t1-t0))
     choose_move()
@@ -297,16 +315,23 @@ def tupleToNp(tuple_):
     return np.asarray(tuple_)
 
 compteurMinimax = 0
+tScore = 0
+tWin = 0
 
 def minimax(current_state, player, depth):
-    global Scores, compteurMinimax
+    global Scores, compteurMinimax, tScore, tWin
     compteurMinimax += 1
+
+    t1 = time.time()
     children = eval_win(current_state, player)
+    tWin += time.time() - t1
 
     if type(children) == int:
         score = children*infinity
     elif depth == 0:
+        t2 = time.time()
         score = eval_global_score(current_state)
+        tScore += time.time() - t2
     else:
         turn = player
         score = -turn
@@ -352,8 +377,7 @@ def combiPossible(i):
 
 def preCalcul():
     for i in range(CONNECT, WIDTH + 1):
-        possibilities = combiPossible(i)
-        for p in possibilities:
+        for p in combiPossible(i):
             dictScore[tuple(p)] = eval_line(p)
 
 
@@ -362,9 +386,10 @@ def main():
 
     t1 = time.time()
     preCalcul()
+
     print(" preCalcul {}".format(time.time() - t1))
 
-    # print(len(dictScore))
+    print(len(dictScore))
     # addMove(Start, 5, COMP)
 
     # human_turn()
@@ -407,6 +432,7 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-# TODO : revoir génération 
+# TODO : Optimisation evalWin
 # TODO : eval_win avec dernier move 
+# TODO : random ?? 
+# TODO : alpha beta 
