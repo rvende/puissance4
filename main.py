@@ -114,7 +114,7 @@ def find(line, subline):
     return False
 
 
-def eval_line(line):
+def eval_line(line, checkRight = False):
     global CONNECT
     tabC, tabC_score = generateCenterCheck(COMP)
     tabL, tabL_score = generateLeftCheck(COMP)
@@ -135,13 +135,15 @@ def eval_line(line):
             accu -= tabL_score[idx]
 
     #Right
-    for idx in range(len(tabR)):
-        if np.all( [ tabR[idx] == line[ len(line)-CONNECT:len(line) ] ] ):
-            accu += tabR_score[idx]
-        if np.all( [ [ -1*i for i in tabR[idx] ] == line[len(line)-CONNECT:len(line)] ] ):
-            accu -= tabR_score[idx]
+    if checkRight :
+        for idx in range(len(tabR)):
+            if np.all( [ tabR[idx] == line[ len(line)-CONNECT:len(line) ] ] ):
+                accu += tabR_score[idx]
+            if np.all( [ [ -1*i for i in tabR[idx] ] == line[len(line)-CONNECT:len(line)] ] ):
+                accu -= tabR_score[idx]
 
     return accu
+
 
 
 def eval_global_score(state):
@@ -150,9 +152,6 @@ def eval_global_score(state):
     height = HEIGHT
 
     # # Horizontale
-    # tabC, tabC_score = generateCenterCheck(COMP)
-    # tabL, tabL_score = generateLeftCheck(COMP)
-    # tabR, tabR_score = generateRightCheck(COMP)
 
     countEmptyLines = 0
 
@@ -160,27 +159,7 @@ def eval_global_score(state):
         #Center
         nbElement = (state[i] != 0).sum()
         if nbElement > 1:
-            accu += eval_line(state[i])
-            # for idx in range(len(tabC)): 
-            #     if find(state[i], [ -1*i for i in tabC[idx] ] ):
-            #         accu -= tabC_score[idx]
-            #     if find(state[i], tabC[idx]):
-            #         accu += tabC_score[idx]
-
-            # #Left
-            # for idx in range(len(tabL)):
-            #     if np.all( [ tabL[idx] == state[i,0:CONNECT] ] ):
-            #         accu += tabL_score[idx]
-            #     if np.all( [ [ -1*i for i in tabL[idx] ] == state[i,0:CONNECT] ] ):
-            #         accu -= tabL_score[idx]
-
-            # #Right
-            # for idx in range(len(tabR)):
-            #     if np.all( [ tabR[idx] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-            #         accu += tabR_score[idx]
-            #     if np.all( [ [ -1*i for i in tabR[idx] ] == state[i,WIDTH-CONNECT:WIDTH] ] ):
-            #         accu -= tabR_score[idx]
-            #         #print("Right")
+            accu += eval_line(state[i], True)
         elif nbElement == 0:
             countEmptyLines += 1
             if countEmptyLines == 4:
@@ -204,23 +183,8 @@ def eval_global_score(state):
         nbElement = (state[:, i] != 0).sum()
         if nbElement > 1:
             countEmptyColumn = 0
-
             accu += eval_line(state[:, i])
 
-            # for idx in range(len(tabC)): 
-            #     if find(state[:, i], tabC[idx]):
-            #         accu += tabC_score[idx]
-            #     if find(state[:, i], [ -1*i for i in tabC[idx] ]):
-            #         accu -= tabC_score[idx]
-            #         #print("V Center")
-
-            # #Bottom
-            # for idx in range(len(tabL)):
-            #     if np.all( [ tabL[idx] == state[0:CONNECT, i] ] ):
-            #         accu += tabL_score[idx]
-            #     if np.all( [ [ -1*i for i in tabL[idx] ] == state[0:CONNECT, i] ] ):
-            #         accu -= tabL_score[idx]
-            #         #print("V Bottom")
         elif nbElement == 0:
             countEmptyColumn += 1
             if countEmptyColumn >= 4 and i == countEmptyColumn:
@@ -241,46 +205,13 @@ def eval_global_score(state):
     for i in range(CONNECT - height, width - CONNECT + 1):
         d = np.diag(state,i)
         if (d != 0).sum() > 1:
-
             accu += eval_line(d)
-
-            # for idx in range(len(tabC)): 
-            #     if find(d, tabC[idx]):
-            #         accu += tabC_score[idx]
-            #     if find(d, [ -1*i for i in tabC[idx] ]):
-            #         accu -= tabC_score[idx]
-            #         #print("D Center")
-
-            # #Bottom
-            # for idx in range(len(tabL)):
-            #     if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-            #         accu += tabL_score[idx]
-            #     if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
-            #         accu -= tabL_score[idx]
-            #         #print("D Bottom")
-
 
     stateT = verticalMirror(state)
     for i in range(CONNECT - height, width - CONNECT + 1):
         d = np.diag(stateT,i)
         if (d != 0).sum() > 1:
-
             accu += eval_line(d)
-            
-            # for idx in range(len(tabC)): 
-            #     if find(d, tabC[idx]):
-            #         accu += tabC_score[idx]
-            #     if find(d, [ -1*i for i in tabC[idx] ]):
-            #         accu -= tabC_score[idx]
-            #         #print("DG Center")
-
-            # #Bottom
-            # for idx in range(len(tabL)):
-            #     if np.all( [ tabL[idx] == d[0:CONNECT] ] ):
-            #         accu += tabL_score[idx]
-            #     if np.all( [ [ -1*i for i in tabL[idx] ] == d[0:CONNECT] ] ):
-            #         accu -= tabL_score[idx]
-            #         #print("DG Bottom")
 
     return accu
 
@@ -414,28 +345,37 @@ dictScore = {}
 
 def combiPossible(i):
     result = []
-
     if i == 1:
-        result.append([-1])
         result.append([1])
         result.append([0])
     else : 
         tmp = combiPossible(i-1)
         for e in tmp: 
-            result.append( [-1] + e )
-            result.append( [1] + e )
-            result.append( [0] + e )
+            result.append( [1]  + e )
+            result.append( [0]  + e )
     return result
 
 
 def preCalcul():
     for i in range(5, 13):
-        tab = np.zeros(i)
+        print(i)
+        t = time.time()
+        possibilities = combiPossible(i)
+        t1 = time.time()
+        for p in possibilities:
+            dictScore[tuple(p)] = eval_line(p, True)
+
+
+
 
 
 
 def main():
     global Start
+
+
+    preCalcul()
+    print(len(dictScore))
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
