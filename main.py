@@ -74,7 +74,7 @@ def generateLeftCheck(player):
     tab = [
         [ player, player, player, player, 0],
         [ player, player, player, 0, 0],
-        [player, player, 0, 0, 0]
+        [ player, player, 0, 0, 0]
     ]
     return tab, [3,2,1]
 
@@ -86,16 +86,16 @@ def generateCenterCheck(player):
         [ 0, player, player, player, 0],
         [ -player, player, player, player, 0, 0],
         [ 0, 0, player, player, player, -player],
-        [player, player, 0, player, player],
-        [player, player, 0, 0, player],
-        [player, 0, 0, player, player],
-        [player, 0, player, 0, player],
-        [player, 0, player, player, player],
+        [ player, player, 0, player, player],
+        [ player, player, 0, 0, player],
+        [ player, 0, 0, player, player],
+        [ player, 0, player, 0, player],
+        [ player, 0, player, player, player],
         [ player, player, player, 0, player],
-        [0, 0, player, player, 0],
-        [0, player, player, 0, 0],
-        [-player, player, player, 0, 0, 0],
-        [0, 0, 0, player, player, -player]
+        [ 0, 0, player, player, 0],
+        [ 0, player, player, 0, 0],
+        [ -player, player, player, 0, 0, 0],
+        [ 0, 0, 0, player, player, -player]
     ]
     return tab, [4, 4, 4, 3, 3, 3, 4, 3, 3, 3, 4, 4, 2, 2, 2, 2]
 
@@ -160,14 +160,17 @@ def eval_global_score(state):
                 height = i 
                 break
 
+    print(">>>\n", state)
     if height != HEIGHT:
         state = state[:height, :]
+    print("<<<\n", state)
 
 
     leftCol = 0
     rightCol = WIDTH-1
     countEmptyColumn = 0
     emptyColRight = False
+
 
     #Vertical
     for i in range(WIDTH):
@@ -195,12 +198,15 @@ def eval_global_score(state):
                 leftCol = i
                 break
             elif i == WIDTH-1 and countEmptyColumn >= 4:
-                rightCol = WIDTH - countEmptyColumn + 3
+                rightCol = WIDTH -1 - countEmptyColumn + 3
         else: 
             countEmptyColumn = 0
 
+    width = rightCol + 1 - leftCol
+
     if rightCol != WIDTH-1 or leftCol != 0:
-        state = state[:,leftCol: rightCol + 1]
+        state = state[:, leftCol: rightCol + 1]
+    print("<<<\n", state)
 
     #Diagonal
     for i in range(CONNECT - height, width - CONNECT + 1):
@@ -372,6 +378,12 @@ def print_board(state):
 
 def main():
     global Start
+
+    human_turn()
+    human_turn()
+    human_turn()
+    human_turn()
+    eval_global_score(Start)
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
