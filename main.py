@@ -9,7 +9,7 @@ import time
 COMP = 1
 HUMAN = -1
 
-DEPTH = 2
+DEPTH = 3
 HEIGHT = 8
 WIDTH = 12
 # Number of aligned coins to win
@@ -95,7 +95,7 @@ def generateCenterCheck(player):
         [ player, player, player, 0, player],
         [ player, player, player, player, 0]
     ]
-    return tab, ([2]*10 + [3]*10 + [4]*5)
+    return tab, ([1]*10 + [3]*10 + [5]*5)
 
 def find(line, subline):
     for i in range(len(line)-len(subline) + 1):
@@ -360,8 +360,9 @@ def preCalcul():
 def main():
     global Start
 
-
+    t1 = time.time()
     preCalcul()
+    print(" preCalcul {}".format(time.time() - t1))
 
     # print(len(dictScore))
     # addMove(Start, 5, COMP)
