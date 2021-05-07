@@ -10,7 +10,7 @@ import itertools as it
 COMP = 1
 HUMAN = -1
 
-DEPTH = 2
+DEPTH = 4
 HEIGHT = 8
 WIDTH = 12
 # Number of aligned coins to win
@@ -19,12 +19,14 @@ CONNECT = 5
 def children_states(state, player):
     turn = player
     children = []
+    lastMoves = []
     for i in range(0, WIDTH):
         if hasSpace(state,i) != 0:
             tmp = state.copy()
-            addMove(tmp,i, player)
+            tmp = addMove(tmp,i, player)
             children.append(tmp)
-    return children
+            lastMoves.append(i)
+    return children, lastMoves
 
 
 tH, tV, tD, tC = 0, 0, 0, 0
@@ -82,7 +84,6 @@ def eval_win(state, player):
 
 def generateCenterCheck(player):
     tab = [
-
         [ 0, 0, 0, player, player],
         [ 0, 0, player, 0, player],
         [ 0, 0, player, player, 0],
@@ -109,9 +110,11 @@ def generateCenterCheck(player):
         [ player, 0, player, player, player],
         [ player, player, 0, player, player],
         [ player, player, player, 0, player],
-        [ player, player, player, player, 0]
+        [ player, player, player, player, 0],
+
+        [player, player, player, player, player]
     ]
-    return tab, ([1]*10 + [3]*10 + [5]*5)
+    return tab, ([1]*10 + [3]*10 + [5]*5 + [infinity])
 
 def find(line, subline):
     for i in range(len(line)-len(subline) + 1):
@@ -170,73 +173,32 @@ def getLineScore(line):
     return score
 
 
-def eval_global_score(state):
+def eval_global_score(stateRef, score, lastMove, player):
+    state = stateRef.copy()
 
-    accu = 0
+    previousScore = 0
     height = HEIGHT
 
-    # # Horizontale
-    countEmptyLines = 0
-    for i in range(HEIGHT):
-        nbElement = (state[i] != 0).sum()
+    line = HEIGHT - hasSpace(state, lastMove)
+    col = lastMove
 
-        if nbElement > 1:
-            accu += getLineScore(state[i]) 
+    previousScore += getLineScore(state[line])
+    previousScore += getLineScore(state[:,col])
+    d = np.diag(state, col - line)
+    previousScore += getLineScore(d)
+    d = np.diag(np.fliplr(state),(WIDTH -1 - col) - line)
+    previousScore += getLineScore(d)
 
-        elif nbElement == 0:
-            countEmptyLines += 1
-            if countEmptyLines == 4:
-                height = i 
-                break
+    state = addMove(state,lastMove,player)
+    newScore = 0
+    newScore += getLineScore(state[line])
+    newScore += getLineScore(state[:,col])
+    d = np.diag(state, col - line)
+    newScore += getLineScore(d)
+    d = np.diag(np.fliplr(state),(WIDTH -1 - col) - line)
+    newScore += getLineScore(d)
 
-    if height != HEIGHT:
-        state = state[:height, :]
-
-
-    leftCol = 0
-    rightCol = WIDTH-1
-    countEmptyColumn = 0
-    emptyColRight = False
-
-
-    #Vertical
-    for i in range(WIDTH):
-        nbElement = (state[:, i] != 0).sum()
-        if nbElement > 1:
-            accu += getLineScore(state[:, i])
-
-        elif nbElement == 0:
-            countEmptyColumn += 1
-            if countEmptyColumn >= 4 and i == countEmptyColumn:
-                leftCol = i
-                break
-            elif i == WIDTH-1 and countEmptyColumn >= 4:
-                rightCol = WIDTH -1 - countEmptyColumn + 3
-        else: 
-            countEmptyColumn = 0
-
-    width = rightCol + 1 - leftCol
-
-    if rightCol != WIDTH-1 or leftCol != 0:
-        state = state[:, leftCol: rightCol + 1]
-
-    #Diagonal
-    stateT = verticalMirror(state)
-    for i in range(CONNECT - height, width - CONNECT + 1):
-
-        d = np.diag(state,i)
-        if (d != 0).sum() > 1:
-            accu += getLineScore(d) 
-
-        # diag inversé
-        d = np.diag(stateT,i)
-        if (d != 0).sum() > 1:
-            accu += getLineScore(d) 
-
-
-    return accu
-
-
+    return score + (newScore -previousScore)
 
 Start = np.zeros((HEIGHT,WIDTH))
 Tree = {}
@@ -251,12 +213,13 @@ def addMove(state, col, player):
     for i in range(HEIGHT - 1,-1,-1):
         if state[i,col] != 0:
             state[i+1, col] = player
-            return
+            return state
     state[0,col] = player
+    return state
 
 
 def human_turn():
-    global Start
+    global Start, currentScore
     move = -1
     print(f'Human turn ["O"]')
     print_board(Start)
@@ -270,7 +233,8 @@ def human_turn():
                 print('Bad move')
                 move = -1
             else:
-                addMove(Start,move-1, HUMAN)
+                currentScore = eval_global_score(Start, currentScore, move-1, HUMAN)
+                Start = addMove(Start,move-1, HUMAN)
         except (EOFError, KeyboardInterrupt):
             print('error')
             exit()
@@ -279,28 +243,30 @@ def human_turn():
 
 
 def choose_move():
-    global Start
-    children = eval_win(Start, COMP)
+    global Start, currentScore
+    #print_board(Start)
+    children, lastMoves = eval_win(Start, COMP)
     best = -infinity
     best_index = None
-    for c in children:
-        if Scores[npToTuple(c)] >= best:
-            best = Scores[npToTuple(c)]
-            best_index = c
-    Start = best_index;
-
+    for i in range(len(children)):
+        if Scores[npToTuple(children[i])] >= best:
+            best = Scores[npToTuple(children[i])]
+            best_Move = lastMoves[i]
+    currentScore = eval_global_score(Start, currentScore, best_Move, COMP)
+    Start = addMove(Start,best_Move, COMP)
+    print("******AI played column ", best_Move+1, "******");
 
 def ai_turn(): 
-    global Start, Scores
+    global Start, Scores, currentScore, tScore
     print(f'AI turn ["X"]')
     print_board(Start)
     Scores = {}
+    tScore = 0
     t0 = time.time()
-    minimax(Start, COMP, DEPTH)
-    print(" --->>> total time  eval_global_score {}   eval_win {} ".format(tScore, tWin))
-    print(" --->>> total time  tH {}   tV {} tD {}   \ntC {} ".format(tH, tV, tD, tC))
+    minimax(Start, COMP, DEPTH, currentScore)
+    print(">>>timer minimax {}".format(time.time()-t0))
+    print(" --->>> total time  eval_global_score {}".format(tScore))
     t1 = time.time()
-    print(">>>timer minimax {}".format(t1-t0))
     choose_move()
     print(">>>>timer choose_move {}".format(time.time()-t1))
     print(len(Scores))
@@ -314,31 +280,38 @@ def npToTuple(state):
 def tupleToNp(tuple_):
     return np.asarray(tuple_)
 
+def drawCheck(state, player):
+    global tC
+    t1 = time.time()
+    for i in range(0,WIDTH):
+        if (hasSpace(state,i) != 0):
+            tmp, tmp2 = children_states(state, player)
+            tC += time.time() - t1
+            return tmp, tmp2
+    tC += time.time() - t1
+    return 0 , 0
+
 compteurMinimax = 0
 tScore = 0
 tWin = 0
+currentScore = 0
 
-def minimax(current_state, player, depth):
-    global Scores, compteurMinimax, tScore, tWin
+def minimax(current_state, player, depth, score):
+    global Scores, compteurMinimax, tScore, tWin, currentScore
     compteurMinimax += 1
 
-    t1 = time.time()
-    children = eval_win(current_state, player)
-    tWin += time.time() - t1
-
-    if type(children) == int:
-        score = children*infinity
-    elif depth == 0:
-        t2 = time.time()
-        score = eval_global_score(current_state)
-        tScore += time.time() - t2
-    else:
-        turn = player
-        score = -turn
-        for child_state in children:
-            if npToTuple(child_state) not in Scores.keys():
-                minimax(child_state, -player, depth-1)
-            score = max(score,Scores[npToTuple(child_state)]) if turn == COMP else min(score,Scores[npToTuple(child_state)])
+    if not (score == infinity or score == -infinity):
+        children, lastMoves = drawCheck(current_state, player)
+        
+        if type(children) != int and depth !=0:
+            for i in range(len(children)):
+                #print(children)
+                if npToTuple(children[i]) not in Scores.keys():  
+                    t2 = time.time()
+                    childscore = eval_global_score(current_state, score, lastMoves[i], player)
+                    tScore += time.time() - t2
+                    minimax(children[i], -player, depth-1, childscore)
+                score = max(score,Scores[npToTuple(children[i])]) if player == COMP else min(score,Scores[npToTuple(children[i])])
     Scores[npToTuple(current_state)] = score
             
 
@@ -382,7 +355,7 @@ def preCalcul():
 
 
 def main():
-    global Start
+    global Start,currentScore
 
     t1 = time.time()
     preCalcul()
@@ -415,9 +388,12 @@ def main():
         ai_turn()
     while (type(eval_win(Start, COMP)) != int):
         human_turn()
+        print("Calculated Score : ",currentScore)
         if(type(eval_win(Start, HUMAN)) == int):
             break
         ai_turn()
+        print("Calculated Score : ",currentScore)
+
 
     print("\n Final board :")
     print_board(Start);
@@ -434,5 +410,5 @@ if __name__ == '__main__':
 
 # TODO : Optimisation evalWin
 # TODO : eval_win avec dernier move 
-# TODO : random ?? 
+# TODO : heuristique 2 : random ?? 
 # TODO : alpha beta 
