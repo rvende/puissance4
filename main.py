@@ -6,7 +6,8 @@ import time
 import itertools as it
 import random
 import sys
-import ast 
+import ast
+from math import isnan 
 
 #PUISSANCE 5 Grille 12*8
 
@@ -25,7 +26,10 @@ def children_states(state, player):
     lastMoves = []
     for i in range(0, WIDTH):
         if hasSpace(state,i) != 0:
+            #tmp = np.array(state, copy=True)
             tmp = state.copy()
+            #print(tmp)
+            #move = input("waiting")
             addMove(tmp,i, player)
             children.append(tmp)
             lastMoves.append(i)
@@ -131,27 +135,6 @@ def eval_line(line):
     tabC, tabC_score = generateCenterCheck(COMP)
     accu = 0
 
-
-    # linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
-    # for l in linesC:
-    #     if len(l) != 0 and l[0] == HUMAN:
-    #         l = l[1:]
-    #     if len(l) >= CONNECT:
-    #         for idx in range(len(tabC)): 
-    #             if find(l, tabC[idx]):
-    #                 accu += tabC_score[idx]
-
-    # linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
-    # for l in linesH:
-
-    #     if len(l) != 0 and l[0] == COMP:
-    #         l = l[1:]
-    #     if len(l) >= CONNECT:
-    #         for idx in range(len(tabC)): 
-    #             if find(l, tabC[idx]):
-    #                 accu -= tabC_score[idx]
-
-
     for idx in range(len(tabC)): 
         if find(line, tabC[idx]):
             accu += tabC_score[idx]
@@ -183,61 +166,49 @@ def getLineWin(line):
     return 0
 
 
-def getLineScore(line):
-    score = 0
-    linesC = line
-    for l in linesC:
-        if len(l) != 0 and l[0] == HUMAN:
-            l = l[1:]
-        if len(l) >= CONNECT:
-            score += dictScore[tuple(l)]
-
-    linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
-    for l in linesH:
-        if len(l) != 0 and l[0] == COMP:
-            l = l[1:]
-        if len(l) >= CONNECT:
-            score -= dictScore[tuple(-l)]
-
-    return score
-
-
 def eval_global_score(state, score, lastMove, player):
 
     height = HEIGHT
     line = HEIGHT - hasSpace(state, lastMove)
     col = lastMove
 
-    
-
-    t1 = time.time()
+    #t1 = time.time()
     previousScore = 0
-    previousScore += getLineScore(state[line])
-    previousScore += getLineScore(state[:,col])
-    d = np.diag(state, col - line)
-    previousScore += getLineScore(d)
-    d = np.diag(np.fliplr(state),(WIDTH -1 - col) - line)
-    previousScore += getLineScore(d)
+    previousScore += dictScore[tuple(state[line])]
+    previousScore += dictScore[tuple(state[:,col])]
 
-    print("1 ------>",time.time() - t1)
+    d = np.diag(state, col - line)
+    if (len(d) > CONNECT):
+        previousScore += dictScore[tuple(d)]
+
+    d = np.diag(np.fliplr(state),(WIDTH -1 - col) - line)
+    if (len(d) > CONNECT):
+        previousScore += dictScore[tuple(d)]
+
+    #print("1 ------>",time.time() - t1)
 
     addMove(state,lastMove,player)
 
 
-    t2 = time.time()
+    #t2 = time.time()
     newScore = 0
-    newScore += getLineScore(state[line])
-    newScore += getLineScore(state[:,col])
+    newScore += dictScore[tuple(state[line])]
+    newScore += dictScore[tuple(state[:,col])]
+
     d = np.diag(state, col - line)
-    newScore += getLineScore(d)
+    if (len(d) > CONNECT):
+        newScore += dictScore[tuple(d)]
+
     d = np.diag(np.fliplr(state),(WIDTH -1 - col) - line)
-    newScore += getLineScore(d)
-    print("2 ------>",time.time()-t2)
+    if (len(d) > CONNECT):
+        newScore += dictScore[tuple(d)]
+
+    #print("2 ------>",time.time()-t2)
     removeMove(state,lastMove,player)
 
-    print("total ------>",time.time() - t1)
+    #print("total ------>",time.time() - t1)
 
-    move = input('Choose column (1-{}): '.format(WIDTH))
+    #move = input('Waiting')
 
     return score + (newScore -previousScore)
 
@@ -322,8 +293,7 @@ def ai_turn():
     tScore = 0
     tDraw = 0
     t0 = time.time()
-    minimax(Start, COMP, DEPTH, currentScore)
-    #, -infinity, infinity)
+    minimax(Start, COMP, DEPTH, currentScore, -infinity, infinity)
     print(">>>timer minimax {}".format(time.time()-t0))
     print(" --->>> total time  eval_global_score {}".format(tScore))
     print(" --->>> total time  draw {}".format(tDraw))
@@ -358,32 +328,34 @@ tWin = 0
 currentScore = 0
 tDraw = 0
 
-def minimax(current_state, player, depth, score):
-    #, alpha, beta):
+def minimax(current_state, player, depth, score, alpha, beta):
     global Scores, compteurMinimax, tScore, tWin, currentScore, tDraw
     compteurMinimax += 1
     if npToTuple(current_state) not in Scores:
-
         if not (score == infinity or score == -infinity):
+            
             t2 = time.time()
             children, lastMoves = drawCheck(current_state, player)
             tDraw += time.time() - t2
             
             if type(children) != int and depth !=0:
                 for i in range(len(children)):
+                    
                     t2 = time.time()
                     childscore = eval_global_score(current_state, score, lastMoves[i], player)
                     tScore += time.time() - t2
-                    minimax(children[i], -player, depth-1, childscore)
-                    #, alpha, beta)
+                    
+                    minimax(children[i], -player, depth-1, childscore, alpha, beta)
 
                     score = max(score,Scores[npToTuple(children[i])]) if player == COMP else min(score,Scores[npToTuple(children[i])])
-                    # if (player == COMP):
-                    #     alpha = max(alpha, Scores[npToTuple(children[i])])
-                    # else :
-                    #     beta = min(beta, Scores[npToTuple(children[i])])
-                    # if beta <= alpha:
-                    #     break;
+                    
+                    if (player == COMP):
+                        alpha = max(alpha, Scores[npToTuple(children[i])])
+                    else :
+                        beta = min(beta, Scores[npToTuple(children[i])])
+                    if beta <= alpha:
+                        break;
+
         Scores[npToTuple(current_state)] = score
             
 
@@ -456,12 +428,16 @@ def preCalcul():
     #tmp = combiPossible(WIDTH)
     tmp = it.product([-1, 0, 1], repeat=WIDTH)
     for p in tmp:
-        dictScore[tuple(p)] = eval_line(tupleToNp(p))
+        score = eval_line(tupleToNp(p))
+        if not isnan(score):
+            dictScore[tuple(p)] = score
 
     for i in range(CONNECT, HEIGHT + 1):
         tmp = it.product([-1, 0, 1], repeat=i)
         for p in tmp:
-            dictScore[tuple(p)] = eval_line(tupleToNp(p))
+            score = eval_line(tupleToNp(p))
+            if not isnan(score):
+                dictScore[tuple(p)] = score
 
     f = open("dictScore.txt", "w")
     for key in dictScore:
