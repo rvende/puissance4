@@ -5,6 +5,8 @@ import numpy as np
 import time
 import itertools as it
 import random
+import sys
+import ast 
 
 #PUISSANCE 5 Grille 12*8
 
@@ -129,9 +131,35 @@ def eval_line(line):
     tabC, tabC_score = generateCenterCheck(COMP)
     accu = 0
 
+
+    # linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
+    # for l in linesC:
+    #     if len(l) != 0 and l[0] == HUMAN:
+    #         l = l[1:]
+    #     if len(l) >= CONNECT:
+    #         for idx in range(len(tabC)): 
+    #             if find(l, tabC[idx]):
+    #                 accu += tabC_score[idx]
+
+    # linesH = np.split(line, np.asarray(line == COMP).nonzero()[0])
+    # for l in linesH:
+
+    #     if len(l) != 0 and l[0] == COMP:
+    #         l = l[1:]
+    #     if len(l) >= CONNECT:
+    #         for idx in range(len(tabC)): 
+    #             if find(l, tabC[idx]):
+    #                 accu -= tabC_score[idx]
+
+
     for idx in range(len(tabC)): 
         if find(line, tabC[idx]):
             accu += tabC_score[idx]
+
+    for idx in range(len(tabC)): 
+        if find(-line, tabC[idx]):
+            accu -= tabC_score[idx]
+
 
     return accu
 
@@ -157,7 +185,7 @@ def getLineWin(line):
 
 def getLineScore(line):
     score = 0
-    linesC = np.split(line, np.asarray(line == HUMAN).nonzero()[0])
+    linesC = line
     for l in linesC:
         if len(l) != 0 and l[0] == HUMAN:
             l = l[1:]
@@ -310,8 +338,8 @@ def verticalMirror(state):
 def npToTuple(state):
     return tuple(map(tuple, state))
 
-#def tupleToNp(tuple_):
-#    return np.asarray(tuple_)
+def tupleToNp(tuple_):
+   return np.asarray(tuple_)
 
 def drawCheck(state, player):
     global tC
@@ -377,34 +405,88 @@ def print_board(state):
     print("| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|\n")
 
 
+def setDictScore():
+    file = None
+
+    try:
+
+        file = open('dictScore.txt')
+        for line in file:
+            (key, val) = line[1:len(line)-1].split(':')
+            key = key[:len(key)-1]
+            #print(key)
+
+            if val == "-inf":
+                val = -infinity
+            elif val == "inf":
+                val = infinity
+            else:
+                val = int(val)
+
+            dictScore[tuple(map(int, key.split(', ')))] = val
+
+    except: 
+        print(print("Unexpected error:", sys.exc_info()[0]))
+        if file is None: 
+            preCalcul()
+    finally:
+        if file is not None:
+            file.close()
+
+
+
+
 dictScore = {}
 
 def combiPossible(i):
-    result = []
+    result = np.asarray()
     if i == 1:
         result.append([1])
+        result.append([-1])
         result.append([0])
     else : 
         tmp = combiPossible(i-1)
         for e in tmp: 
             result.append( [1]  + e )
             result.append( [0]  + e )
+            result.append( [-1]  + e )
     return result
 
 
 def preCalcul():
-    for p in combiPossible(12):
-        dictScore[tuple(p)] = eval_line(p)
-    for i in range(CONNECT, HEIGHT):
-        for p in combiPossible(i):
-            dictScore[tuple(p)] = eval_line(p)
+    #tmp = combiPossible(WIDTH)
+    tmp = it.product([-1, 0, 1], repeat=WIDTH)
+    i = 0
+    t1 = time.time()
+    for p in tmp:
+        if i != 0 and i%200 == 0:
+            print(i, time.time()-t1)
+            t1 = time.time()
+            f = open("dictScore.txt", "w")
+            print(dictScore)
+            for key in dictScore:
+                f.write('{}:{}\n'.format(key, dictScore[key]))
+            f.close()
+            return 
+        dictScore[tuple(p)] = eval_line(tupleToNp(p))
+        i += 1
+    #     
+    print("final WIDTH ", len(list(tmp)))
+    for i in range(CONNECT, HEIGHT + 1):
+        #tmp = it.product([-1, 0, 1], repeat=i)
+        tmp = combiPossible(i)
+        print(i)
+        for p in tmp:
+            dictScore[tuple(p)] = eval_line(tupleToNp(p))
 
 
 def main():
     global Start,currentScore
 
+    setDictScore()
+
     t1 = time.time()
-    preCalcul()
+    #preCalcul()
 
     print(" preCalcul {}".format(time.time() - t1))
 
