@@ -26,18 +26,11 @@ def children_states(state, player):
     lastMoves = []
     for i in range(0, WIDTH):
         if hasSpace(state,i) != 0:
-            #tmp = np.array(state, copy=True)
-            tmp = state.copy()
-            #print(tmp)
-            #move = input("waiting")
-            addMove(tmp,i, player)
-            children.append(tmp)
             lastMoves.append(i)
-    return children, lastMoves
+    return lastMoves
 
 
 tH, tV, tD, tC = 0, 0, 0, 0
-#TODO verification sur le dernier mouvement
 def eval_win(state, player):
 
     global tH, tV, tD, tC
@@ -83,9 +76,6 @@ def eval_win(state, player):
             tmp = children_states(state, player)
             tC += time.time() - t1
             return tmp
-    
-
-    
     return 0
 
 
@@ -124,10 +114,10 @@ def generateCenterCheck(player):
     return tab, ([1]*10 + [3]*10 + [5]*5 + [infinity])
 
 def find(line, subline):
-    for i in range(len(line)-len(subline) + 1):
-        if np.all( [subline == line[i:i+len(subline)]] ):
-            return True
-    return False
+    if np.all( [subline == line] ):
+        return True
+    else :
+        return False
 
 
 def eval_line(line):
@@ -171,10 +161,11 @@ def eval_global_score(state, score, lastMove, player):
     height = HEIGHT
     line = HEIGHT - hasSpace(state, lastMove)
     col = lastMove
-
-    #t1 = time.time()
+    firstcol = col-(CONNECT-1) if col-(CONNECT-1) > 0 else 0
+    lastcol = col + CONNECT if col + CONNECT < WIDTH else WIDTH
+        
     previousScore = 0
-    previousScore += dictScore[tuple(state[line])]
+    previousScore += dictScore[tuple(state[line, firstcol:lastcol])]
     previousScore += dictScore[tuple(state[:,col])]
 
     d = np.diag(state, col - line)
@@ -185,14 +176,10 @@ def eval_global_score(state, score, lastMove, player):
     if (len(d) > CONNECT):
         previousScore += dictScore[tuple(d)]
 
-    #print("1 ------>",time.time() - t1)
-
     addMove(state,lastMove,player)
 
-
-    #t2 = time.time()
     newScore = 0
-    newScore += dictScore[tuple(state[line])]
+    newScore += dictScore[tuple(state[line, firstcol:lastcol])]
     newScore += dictScore[tuple(state[:,col])]
 
     d = np.diag(state, col - line)
@@ -203,14 +190,11 @@ def eval_global_score(state, score, lastMove, player):
     if (len(d) > CONNECT):
         newScore += dictScore[tuple(d)]
 
-    #print("2 ------>",time.time()-t2)
-    removeMove(state,lastMove,player)
-
-    #print("total ------>",time.time() - t1)
-
-    #move = input('Waiting')
+    removeMove(state,lastMove)
 
     return score + (newScore -previousScore)
+
+
 
 Start = np.zeros((HEIGHT,WIDTH))
 Tree = {}
@@ -228,7 +212,7 @@ def addMove(state, col, player):
             return
     state[0,col] = player
 
-def removeMove(state, col, player):
+def removeMove(state, col):
     global HEIGHT
     for i in range(HEIGHT - 1,-1,-1):
         if state[i,col] != 0:
@@ -247,7 +231,7 @@ def human_turn():
             move = int(input('Choose column (1-{}): '.format(WIDTH)))
             can_move = (hasSpace(Start,move-1) != 0)
 
-            if not can_move:
+            if not can_move or move > WIDTH or move < 1:
                 print('Bad move')
                 move = -1
             else:
@@ -260,27 +244,32 @@ def human_turn():
             print('Bad choice')
 
 
-def choose_move():
+def choose_move(tupleList, movelist):
     global Start, currentScore
-    #print_board(Start)
-    children, lastMoves = eval_win(Start, COMP)
     best = -infinity
     best_Move = []
-    for i in range(len(children)):
-        print(Scores[npToTuple(children[i])])
-        if Scores[npToTuple(children[i])] > best:
-            best = Scores[npToTuple(children[i])]
-            best_Move = [lastMoves[i]]
-        if Scores[npToTuple(children[i])] == best:
-            best_Move.append(lastMoves[i])
+
+    for i in range(len(tupleList)):
+
+        print(Scores[tupleList[i]])
+
+        if Scores[tupleList[i]] > best:
+            best = Scores[tupleList[i]]
+            best_Move = [movelist[i]]
+
+        if Scores[tupleList[i]] == best:
+            best_Move.append(movelist[i])
+
     if len(best_Move) > 1:
         choice = random.randint(0, len(best_Move)-1)
         best_Move = [best_Move[choice]]
+
     if len(best_Move) == 0:
         for i in range(WIDTH):
             if hasSpace(Start,i):
                 best_Move = [i]
                 break
+
     currentScore = eval_global_score(Start, currentScore, best_Move[0], COMP)
     addMove(Start,best_Move[0], COMP)
     print("******AI played column ", best_Move[0]+1, "******");
@@ -292,15 +281,16 @@ def ai_turn():
     Scores = {}
     tScore = 0
     tDraw = 0
-    t0 = time.time()
-    minimax(Start, COMP, DEPTH, currentScore, -infinity, infinity)
+    #t0 = time.time()
+    tmp = Start.copy()
+    outList, movelist = minimax(tmp, COMP, DEPTH, currentScore, -infinity, infinity)
     print(">>>timer minimax {}".format(time.time()-t0))
-    print(" --->>> total time  eval_global_score {}".format(tScore))
-    print(" --->>> total time  draw {}".format(tDraw))
-    t1 = time.time()
-    choose_move()
-    print(">>>>timer choose_move {}".format(time.time()-t1))
-    print(len(Scores))
+    #print(" --->>> total time  eval_global_score {}".format(tScore))
+    #print(" --->>> total time  draw {}".format(tDraw))
+    #t1 = time.time()
+    choose_move(outList,movelist)
+    #print(">>>>timer choose_move {}".format(time.time()-t1))
+    #print(len(Scores))
 
 def verticalMirror(state):
     return state[:,::-1]
@@ -316,11 +306,11 @@ def drawCheck(state, player):
     t1 = time.time()
     for i in range(0,WIDTH):
         if (hasSpace(state,i) != 0):
-            tmp, tmp2 = children_states(state, player)
+            tmp = children_states(state, player)
             tC += time.time() - t1
-            return tmp, tmp2
+            return tmp
     tC += time.time() - t1
-    return 0 , 0
+    return 0
 
 compteurMinimax = 0
 tScore = 0
@@ -331,37 +321,46 @@ tDraw = 0
 def minimax(current_state, player, depth, score, alpha, beta):
     global Scores, compteurMinimax, tScore, tWin, currentScore, tDraw
     compteurMinimax += 1
+    outList = []
+    movelist = []
     if npToTuple(current_state) not in Scores:
         if not (score == infinity or score == -infinity):
             
             t2 = time.time()
-            children, lastMoves = drawCheck(current_state, player)
+            lastMoves = drawCheck(current_state, player)
             tDraw += time.time() - t2
             
-            if type(children) != int and depth !=0:
-                for i in range(len(children)):
+            if type(lastMoves) != int and depth !=0:
+                for el in lastMoves:
                     
                     t2 = time.time()
-                    childscore = eval_global_score(current_state, score, lastMoves[i], player)
+                    childscore = eval_global_score(current_state, score, el, player)
                     tScore += time.time() - t2
                     
-                    minimax(children[i], -player, depth-1, childscore, alpha, beta)
-
-                    score = max(score,Scores[npToTuple(children[i])]) if player == COMP else min(score,Scores[npToTuple(children[i])])
-                    
+                    addMove(current_state, el, player)
+                    if depth == DEPTH:
+                        outList.append(npToTuple(current_state))
+                        movelist.append(el)
+                    minimax(current_state, -player, depth-1, childscore, alpha, beta)
+                    scoreChild = Scores[npToTuple(current_state)]
+                    removeMove(current_state,el)
+                    score = max(score,scoreChild) if player == COMP else min(score,scoreChild)
+        
                     if (player == COMP):
-                        alpha = max(alpha, Scores[npToTuple(children[i])])
+                        alpha = max(alpha, scoreChild)
                     else :
-                        beta = min(beta, Scores[npToTuple(children[i])])
+                        beta = min(beta, scoreChild)
                     if beta <= alpha:
                         break;
 
         Scores[npToTuple(current_state)] = score
+        return outList,movelist
+
             
 
 
 def print_board(state):
-    print("*************************************************")
+    print("_________________________________________________")
     for x in range(HEIGHT-1,-1,-1):
         s = "|"
         for y in range(0,WIDTH):
@@ -373,7 +372,7 @@ def print_board(state):
                 s+=" O "
             s+="|"
         print(s)
-        print("*************************************************")
+        print("_________________________________________________")
     print("| 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10| 11| 12|\n")
 
 
@@ -381,7 +380,6 @@ def setDictScore():
     file = None
 
     try:
-
         file = open('dictScore.txt')
         for line in file:
             (key, val) = line[1:len(line)-1].split(':')
@@ -396,77 +394,56 @@ def setDictScore():
 
             dictScore[tuple(map(int, key.split(', ')))] = val
 
-    except: 
-        print(print("Unexpected error:", sys.exc_info()[0]))
-        if file is None: 
-            preCalcul()
+    except FileNotFoundError:
+        print("File not Found, creating dictScore.txt")
+        preCalcul()
+    except :
+        print("Unexpected error:", sys.exc_info()[0])
     finally:
         if file is not None:
             file.close()
 
 
-
-
 dictScore = {}
 
 def combiPossible(i):
-    result = np.asarray()
+    result = []
     if i == 1:
         result.append([1])
         result.append([-1])
         result.append([0])
-    else : 
+    else :
         tmp = combiPossible(i-1)
         for e in tmp: 
-            result.append( [1]  + e )
-            result.append( [0]  + e )
-            result.append( [-1]  + e )
+            result.append( [1] + e )
+            result.append( [0] + e )
+            result.append( [-1] + e )
+    if (i == 5):
+        for el in result:
+            dictScore[tuple(el)] = eval_line(np.asarray(el))
+    elif i > 5:
+        for el in result:
+            dictScore[tuple(el)] = dictScore[tuple(el[:len(el)-1])] + eval_line(np.asarray(el[len(el)-CONNECT:len(el)]))
     return result
 
 
 def preCalcul():
-    #tmp = combiPossible(WIDTH)
-    tmp = it.product([-1, 0, 1], repeat=WIDTH)
-    for p in tmp:
-        score = eval_line(tupleToNp(p))
-        if not isnan(score):
-            dictScore[tuple(p)] = score
-
-    for i in range(CONNECT, HEIGHT + 1):
-        tmp = it.product([-1, 0, 1], repeat=i)
-        for p in tmp:
-            score = eval_line(tupleToNp(p))
-            if not isnan(score):
-                dictScore[tuple(p)] = score
+    
+    combiPossible(CONNECT*2 -1)
 
     f = open("dictScore.txt", "w")
     for key in dictScore:
         f.write('{}:{}\n'.format(key, dictScore[key]))
     f.close()
+    print("dictScore.txt created")
 
 def main():
     global Start,currentScore
 
-    setDictScore()
 
     t1 = time.time()
-    #preCalcul()
-
-    print(" preCalcul {}".format(time.time() - t1))
-
-    print(len(dictScore))
-    # addMove(Start, 5, COMP)
-
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # human_turn()
-    # print_board(Start)
-    # print(eval_global_score(Start))
-    
-
+    setDictScore()
+    print(" preCalcul {}\n".format(time.time() - t1))
 
     firstPlayer=2
     firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
@@ -500,5 +477,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-# TODO : virer le split => DONE:Precalc peuple un dico avec toutes les lignes possibles (l12, l8 + diag l5-8)
 # TODO : heuristique 2 : random ??
