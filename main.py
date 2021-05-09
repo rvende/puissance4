@@ -284,7 +284,7 @@ def ai_turn():
     #t0 = time.time()
     tmp = Start.copy()
     outList, movelist = minimax(tmp, COMP, DEPTH, currentScore, -infinity, infinity)
-    print(">>>timer minimax {}".format(time.time()-t0))
+    #print(">>>timer minimax {}".format(time.time()-t0))
     #print(" --->>> total time  eval_global_score {}".format(tScore))
     #print(" --->>> total time  draw {}".format(tDraw))
     #t1 = time.time()
