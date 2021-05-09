@@ -414,7 +414,6 @@ def setDictScore():
         for line in file:
             (key, val) = line[1:len(line)-1].split(':')
             key = key[:len(key)-1]
-            #print(key)
 
             if val == "-inf":
                 val = -infinity
@@ -456,29 +455,18 @@ def combiPossible(i):
 def preCalcul():
     #tmp = combiPossible(WIDTH)
     tmp = it.product([-1, 0, 1], repeat=WIDTH)
-    i = 0
-    t1 = time.time()
     for p in tmp:
-        if i != 0 and i%200 == 0:
-            print(i, time.time()-t1)
-            t1 = time.time()
-            f = open("dictScore.txt", "w")
-            print(dictScore)
-            for key in dictScore:
-                f.write('{}:{}\n'.format(key, dictScore[key]))
-            f.close()
-            return 
         dictScore[tuple(p)] = eval_line(tupleToNp(p))
-        i += 1
-    #     
-    print("final WIDTH ", len(list(tmp)))
+
     for i in range(CONNECT, HEIGHT + 1):
-        #tmp = it.product([-1, 0, 1], repeat=i)
-        tmp = combiPossible(i)
-        print(i)
+        tmp = it.product([-1, 0, 1], repeat=i)
         for p in tmp:
             dictScore[tuple(p)] = eval_line(tupleToNp(p))
 
+    f = open("dictScore.txt", "w")
+    for key in dictScore:
+        f.write('{}:{}\n'.format(key, dictScore[key]))
+    f.close()
 
 def main():
     global Start,currentScore
