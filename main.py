@@ -1,4 +1,3 @@
-#from power import *
 from fen import *
 import sys
 import threading
