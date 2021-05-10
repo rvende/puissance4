@@ -29,7 +29,8 @@ class ConfWorker(QtCore.QObject):
     COMP = 1
     HUMAN = -1
 
-    DEPTH = 4
+    DEPTH = 6
+    DEPTH2 = 4
     HEIGHT = 8
     WIDTH = 12
     # Number of aligned coins to win
@@ -121,7 +122,7 @@ class ConfWorker(QtCore.QObject):
         return 0
 
 
-    def generateCenterCheck(player):
+    def generateCenterCheck(self, player):
         tab = [
             [ 0, 0, 0, player, player],
             [ 0, 0, player, 0, player],
@@ -168,7 +169,8 @@ class ConfWorker(QtCore.QObject):
         return False
 
 
-    def eval_line(self, line):
+    #Utilisé soit sur une ligne de dimension 5 soit sur les 5 derniers éléments d'une ligne > 5
+    def preCalcul_line(self, line):
         tabC, tabC_score = self.generateCenterCheck(self.COMP)
         accu = 0
 
@@ -261,15 +263,12 @@ class ConfWorker(QtCore.QObject):
 
     def human_turn(self):
         move = -1
-        #print(f'Human turn ["O"]')
-        #self.print_board(self.Start)
         self.turn_signal.emit(self.HUMAN)
         while move < 1 or move > self.WIDTH:
             try:
                 while not self.signal_reived:
                     pass
                 move = int(self.human_choice)
-                #move = int(input('Choose column (1-{}): '.format(self.WIDTH)))
                 if move <= self.WIDTH and move >= 1:
                     can_move = (self.hasSpace(self.Start,move-1) != 0)
 
@@ -296,8 +295,6 @@ class ConfWorker(QtCore.QObject):
 
         for i in range(len(tupleList)):
 
-            #print(Scores[tupleList[i]])
-
             if self.Scores[tupleList[i]] > best:
                 best = self.Scores[tupleList[i]]
                 best_Move = [movelist[i]]
@@ -320,49 +317,30 @@ class ConfWorker(QtCore.QObject):
         print("******AI played column ", best_Move[0]+1, "******")
 
     def ai_turn(self): 
-        #print(f'AI turn ["X"]')
         self.turn_signal.emit(self.COMP)
         self.Scores = {}
         tScore = 0
         tDraw = 0
-        #t0 = time.time()
         tmp = self.Start.copy()
-        outList, movelist = self.minimax(tmp, self.COMP, self.DEPTH, self.currentScore, -infinity, infinity)
-        #print(">>>timer minimax {}".format(time.time()-t0))
-        #print(" --->>> total time  eval_global_score {}".format(tScore))
-        #print(" --->>> total time  draw {}".format(tDraw))
-        #t1 = time.time()
+        outList, movelist = self.minimax(tmp, self.COMP, self.DEPTH, self.currentScore, -infinity, infinity, self.DEPTH)
         self.choose_move(outList,movelist)
-        #print(">>>>timer choose_move {}".format(time.time()-t1))
         self.signal_noeud.emit(len(self.Scores))
-        #print(len(Scores))
 
     def ai_turn2(self): 
-        #global Start, Scores, currentScore, tScore,tDraw
         self.Scores = {}
         self.tScore = 0
         self.tDraw = 0
-        #t0 = time.time()
         self.turn_signal.emit(2)
         tmp = self.Start.copy()
-        outList, movelist = self.minimax(tmp, self.HUMAN, self.DEPTH, self.currentScore, -infinity, infinity)
-        #print(">>>timer minimax {}".format(time.time()-t0))
-        #print(" --->>> total time  eval_global_score {}".format(tScore))
-        #print(" --->>> total time  draw {}".format(tDraw))
-        #t1 = time.time()
+        outList, movelist = self.minimax(tmp, self.HUMAN, self.DEPTH2, self.currentScore, -infinity, infinity, self.DEPTH2)
         self.choose_move2(outList,movelist)
-        #print(">>>>timer choose_move {}".format(time.time()-t1))
-        print("Number of nodes :", len(self.Scores))
         self.signal_noeud.emit(len(self.Scores))
 
     def choose_move2(self,tupleList, movelist):
-        #global Start, currentScore
         best = +infinity
         best_Move = []
 
         for i in range(len(tupleList)):
-
-            #print(Scores[tupleList[i]])
 
             if self.Scores[tupleList[i]] < best:
                 best = self.Scores[tupleList[i]]
@@ -403,8 +381,7 @@ class ConfWorker(QtCore.QObject):
         self.tC += time.time() - t1
         return 0
 
-    def minimax(self, current_state, player, depth, score, alpha, beta):
-        #global Scores, compteurMinimax, tScore, tWin, currentScore, tDraw
+    def minimax(self, current_state, player, depth, score, alpha, beta, depthWanted):
         self.compteurMinimax += 1
         outList = []
         movelist = []
@@ -416,25 +393,31 @@ class ConfWorker(QtCore.QObject):
                 self.tDraw += time.time() - t2
                 
                 if type(lastMoves) != int and depth !=0:
+                    childrenScore = []
                     for el in lastMoves:
                         
                         t2 = time.time()
-                        childscore = self.eval_global_score(current_state, score, el, player)
+                        childrenScore.append(self.eval_global_score(current_state, score, el, player))
                         self.tScore += time.time() - t2
 
-                        
-                        self.addMove(current_state, el, player)
+                    if player == self.HUMAN:
+                        order = np.argsort(childrenScore)
+                    else:
+                        order = np.argsort(-np.asarray(childrenScore))
+
+                    for i in order:
+                        self.addMove(current_state, lastMoves[i], player)
 
                         tupleTmp = self.npToTuple(current_state)
 
-                        if depth == self.DEPTH:
+                        if depth == depthWanted:
                             outList.append(tupleTmp)
-                            movelist.append(el)
+                            movelist.append(lastMoves[i])
                         
-                        self.minimax(current_state, -player, depth-1, childscore, alpha, beta)
+                        self.minimax(current_state, -player, depth-1, childrenScore[i], alpha, beta, depthWanted)
 
                         scoreChild = self.Scores[tupleTmp]
-                        self.removeMove(current_state,el)
+                        self.removeMove(current_state,lastMoves[i])
 
                         score = max(score,scoreChild) if player == self.COMP else min(score,scoreChild)
             
@@ -483,7 +466,7 @@ class ConfWorker(QtCore.QObject):
                 elif val == "inf":
                     val = infinity
                 else:
-                    val = float(val)
+                    val = int(val)
 
                 self.dictScore[tuple(map(int, key.split(', ')))] = val
 
@@ -510,12 +493,11 @@ class ConfWorker(QtCore.QObject):
                 result.append( [-1] + e )
         if (i == 5):
             for el in result:
-                self.dictScore[tuple(el)] = self.eval_line(np.asarray(el))
+                self.dictScore[tuple(el)] = self.preCalcul_line(np.asarray(el))
         elif i > 5:
             for el in result:
-                self.dictScore[tuple(el)] = self.dictScore[tuple(el[:len(el)-1])] + self.eval_line(np.asarray(el[len(el)-self.CONNECT:len(el)]))
+                self.dictScore[tuple(el)] = self.dictScore[tuple(el[:len(el)-1])] + self.preCalcul_line(np.asarray(el[len(el)-self.CONNECT:len(el)]))
         return result
-
 
     def preCalcul(self):
         
@@ -572,9 +554,11 @@ class ConfWorker(QtCore.QObject):
             else:
                 print("Ai will play with AI 2")
                 self.start_chrono_signal.emit()
+                t4 = 2
                 while (type(self.eval_win(self.Start, self.COMP)) != int):
                     self.print_board(self.Start)
-                    input('Next Move (press Key)')
+                    #input('Next Move (press Key)')
+                    time.sleep(max(2-t4,0))
                     print('AI 2 turn ["O"]')
                     t3 = time.time()
                     self.ai_turn2()
@@ -586,7 +570,8 @@ class ConfWorker(QtCore.QObject):
                     if(type(self.eval_win(self.Start, self.HUMAN)) == int):
                         break
                     self.print_board(self.Start)
-                    input('Next Move (press Key)')
+                    #input('Next Move (press Key)')
+                    time.sleep(max(2-t4,0))
                     t3 = time.time()
                     print('AI turn ["X"]')
                     self.ai_turn()
@@ -597,8 +582,10 @@ class ConfWorker(QtCore.QObject):
                     self.signal_score.emit(self.currentScore)
 
 
+
             print("\n Final board :")
             self.print_board(self.Start)
+            time.sleep(2)
             score = self.eval_win(self.Start, self.COMP)
             if score == 1:
                 #print("AI win")
