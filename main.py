@@ -111,10 +111,11 @@ def generateCenterCheck(player):
 
         [player, player, player, player, player]
     ]
-    return tab, ([1]*10 + [3]*10 + [5]*5 + [infinity])
+    return tab, ([1]*10 + [5]*10 + [10]*5 + [100])
 
 def find(line, subline):
-    if np.all( [subline == line] ):
+    if np.array_equal(subline, line):
+    #if np.all( [subline == line] ):
         return True
     else :
         return False
@@ -131,7 +132,7 @@ def eval_line(line):
 
     for idx in range(len(tabC)): 
         if find(-line, tabC[idx]):
-            accu -= tabC_score[idx]
+            accu -= tabC_score[idx]*1.1
 
 
     return accu
@@ -156,7 +157,7 @@ def getLineWin(line):
     return 0
 
 
-def eval_global_score(state, score, lastMove, player):
+def eval_global_score(state, score, lastMove, player, factor):
 
     height = HEIGHT
     line = HEIGHT - hasSpace(state, lastMove)
@@ -192,7 +193,7 @@ def eval_global_score(state, score, lastMove, player):
 
     removeMove(state,lastMove)
 
-    return score + (newScore -previousScore)
+    return score + (newScore -previousScore)*factor
 
 
 
@@ -229,14 +230,18 @@ def human_turn():
     while move < 1 or move > WIDTH:
         try:
             move = int(input('Choose column (1-{}): '.format(WIDTH)))
-            can_move = (hasSpace(Start,move-1) != 0)
+            if move < WIDTH and move > 1:
+                can_move = (hasSpace(Start,move-1) != 0)
 
-            if not can_move or move > WIDTH or move < 1:
+                if not can_move :
+                    print('Bad move')
+                    move = -1
+                else:
+                    currentScore = eval_global_score(Start, currentScore, move-1, HUMAN, 1)
+                    addMove(Start,move-1, HUMAN)
+            else :
                 print('Bad move')
                 move = -1
-            else:
-                currentScore = eval_global_score(Start, currentScore, move-1, HUMAN)
-                addMove(Start,move-1, HUMAN)
         except (EOFError, KeyboardInterrupt):
             print('error')
             exit()
@@ -251,7 +256,7 @@ def choose_move(tupleList, movelist):
 
     for i in range(len(tupleList)):
 
-        print(Scores[tupleList[i]])
+        #print(Scores[tupleList[i]])
 
         if Scores[tupleList[i]] > best:
             best = Scores[tupleList[i]]
@@ -270,7 +275,7 @@ def choose_move(tupleList, movelist):
                 best_Move = [i]
                 break
 
-    currentScore = eval_global_score(Start, currentScore, best_Move[0], COMP)
+    currentScore = eval_global_score(Start, currentScore, best_Move[0], COMP, 1)
     addMove(Start,best_Move[0], COMP)
     print("******AI played column ", best_Move[0]+1, "******");
 
@@ -284,7 +289,7 @@ def ai_turn():
     #t0 = time.time()
     tmp = Start.copy()
     outList, movelist = minimax(tmp, COMP, DEPTH, currentScore, -infinity, infinity)
-    print(">>>timer minimax {}".format(time.time()-t0))
+    #print(">>>timer minimax {}".format(time.time()-t0))
     #print(" --->>> total time  eval_global_score {}".format(tScore))
     #print(" --->>> total time  draw {}".format(tDraw))
     #t1 = time.time()
@@ -334,15 +339,18 @@ def minimax(current_state, player, depth, score, alpha, beta):
                 for el in lastMoves:
                     
                     t2 = time.time()
-                    childscore = eval_global_score(current_state, score, el, player)
+                    childscore = eval_global_score(current_state, score, el, player, depth)
                     tScore += time.time() - t2
                     
                     addMove(current_state, el, player)
                     if depth == DEPTH:
                         outList.append(npToTuple(current_state))
                         movelist.append(el)
+                    tupleTmp = npToTuple(current_state)
+                    
                     minimax(current_state, -player, depth-1, childscore, alpha, beta)
-                    scoreChild = Scores[npToTuple(current_state)]
+
+                    scoreChild = Scores[tupleTmp]
                     removeMove(current_state,el)
                     score = max(score,scoreChild) if player == COMP else min(score,scoreChild)
         
@@ -352,7 +360,6 @@ def minimax(current_state, player, depth, score, alpha, beta):
                         beta = min(beta, scoreChild)
                     if beta <= alpha:
                         break;
-
         Scores[npToTuple(current_state)] = score
         return outList,movelist
 
@@ -390,7 +397,7 @@ def setDictScore():
             elif val == "inf":
                 val = infinity
             else:
-                val = int(val)
+                val = float(val)
 
             dictScore[tuple(map(int, key.split(', ')))] = val
 
@@ -454,13 +461,17 @@ def main():
     print("********************")
 
     if (firstPlayer == 1):
+        t3 = time.time()
         ai_turn()
+        print("AI played in {} sec".format(time.time()-t3))
     while (type(eval_win(Start, COMP)) != int):
         human_turn()
         print("Calculated Score : ",currentScore)
         if(type(eval_win(Start, HUMAN)) == int):
             break
+        t3 = time.time()
         ai_turn()
+        print("AI played in {} sec".format(time.time()-t3))
         print("Calculated Score : ",currentScore)
 
 
@@ -478,3 +489,9 @@ if __name__ == '__main__':
     main()
 
 # TODO : heuristique 2 : random ??
+# TODO diapo
+# TODO interface
+
+
+
+
