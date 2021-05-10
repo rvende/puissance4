@@ -229,8 +229,6 @@ def removeMove(state, col):
 def human_turn():
     global Start, currentScore
     move = -1
-    print(f'Human turn ["O"]')
-    print_board(Start)
 
     while move < 1 or move > WIDTH:
         try:
@@ -261,7 +259,7 @@ def choose_move(tupleList, movelist):
 
     for i in range(len(tupleList)):
 
-        print(Scores[tupleList[i]])
+        #print(Scores[tupleList[i]])
 
         if Scores[tupleList[i]] > best:
             best = Scores[tupleList[i]]
@@ -286,8 +284,6 @@ def choose_move(tupleList, movelist):
 
 def ai_turn(): 
     global Start, Scores, currentScore, tScore,tDraw
-    print(f'AI turn ["X"]')
-    print_board(Start)
     Scores = {}
     tScore = 0
     tDraw = 0
@@ -300,7 +296,53 @@ def ai_turn():
     #t1 = time.time()
     choose_move(outList,movelist)
     #print(">>>>timer choose_move {}".format(time.time()-t1))
-    #print(len(Scores))
+    print("Number of nodes :", len(Scores))
+
+def ai_turn2(): 
+    global Start, Scores, currentScore, tScore,tDraw
+    Scores = {}
+    tScore = 0
+    tDraw = 0
+    #t0 = time.time()
+    tmp = Start.copy()
+    outList, movelist = minimax(tmp, HUMAN, DEPTH, currentScore, -infinity, infinity)
+    #print(">>>timer minimax {}".format(time.time()-t0))
+    #print(" --->>> total time  eval_global_score {}".format(tScore))
+    #print(" --->>> total time  draw {}".format(tDraw))
+    #t1 = time.time()
+    choose_move2(outList,movelist)
+    #print(">>>>timer choose_move {}".format(time.time()-t1))
+    print("Number of nodes :", len(Scores))
+
+def choose_move2(tupleList, movelist):
+    global Start, currentScore
+    best = +infinity
+    best_Move = []
+
+    for i in range(len(tupleList)):
+
+        #print(Scores[tupleList[i]])
+
+        if Scores[tupleList[i]] < best:
+            best = Scores[tupleList[i]]
+            best_Move = [movelist[i]]
+
+        if Scores[tupleList[i]] == best:
+            best_Move.append(movelist[i])
+
+    if len(best_Move) > 1:
+        choice = random.randint(0, len(best_Move)-1)
+        best_Move = [best_Move[choice]]
+
+    if len(best_Move) == 0:
+        for i in range(WIDTH):
+            if hasSpace(Start,i):
+                best_Move = [i]
+                break
+    currentScore = eval_global_score(Start, currentScore, best_Move[0], HUMAN)
+    addMove(Start,best_Move[0], HUMAN)
+    print("******AI 2 played column ", best_Move[0]+1, "******");
+
 
 def verticalMirror(state):
     return state[:,::-1]
@@ -464,35 +506,64 @@ def main():
     print(" preCalcul {}\n".format(time.time() - t1))
 
     firstPlayer=2
-    firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
-    while (firstPlayer!= 0 and firstPlayer!=1):
-        print("Please press 0 or 1")
-        firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
+    firstPlayer = int(input('Press 0 to go first, 1 to go second, 2 to watch AI play against itself: '))
+    while (firstPlayer!= 0 and firstPlayer!=1 and firstPlayer != 2):
+        print("Please press 0 or 1 or 2")
+        firstPlayer = int(input('Press 0 to go first, 1 to go second, 2 to watch AI play against itself: '))
 
     print("********************")
 
-    if (firstPlayer == 1):
-        t3 = time.time()
-        ai_turn()
-        print("AI played in {} sec".format(time.time()-t3))
-    while (type(eval_win(Start, COMP)) != int):
-        human_turn()
-        print("Calculated Score : ",currentScore)
-        if(type(eval_win(Start, HUMAN)) == int):
-            break
-        t3 = time.time()
-        ai_turn()
-        print("AI played in {} sec".format(time.time()-t3))
-        print("Calculated Score : ",currentScore)
+    if (firstPlayer !=2):
+        if (firstPlayer == 1):
+            print_board(Start)
+            print('AI turn ["X"]')
+            t3 = time.time()
+            ai_turn()
+            print("AI played in {} sec".format(time.time()-t3))
+        while (type(eval_win(Start, COMP)) != int):
+            print_board(Start)
+            print('Human turn ["O"]')
+            human_turn()
+            print("Calculated Score : ",currentScore)
+            if(type(eval_win(Start, HUMAN)) == int):
+                break
+            print_board(Start)
+            print('AI turn ["X"]')
+            t3 = time.time()
+            ai_turn()
+            print("AI played in {} sec".format(time.time()-t3))
+            print("Calculated Score : ",currentScore)
+    else :
+        print("Ai will play with AI 2")
+        while (type(eval_win(Start, COMP)) != int):
+            print_board(Start)
+            input('Next Move (press Key)')
+            print('AI 2 turn ["O"]')
+            t3 = time.time()
+            ai_turn2()
+            print("AI 2 played in {} sec".format(time.time()-t3))
+            print("Calculated Score : ",currentScore)
+            if(type(eval_win(Start, HUMAN)) == int):
+                break
+            print_board(Start)
+            input('Next Move (press Key)')
+            t3 = time.time()
+            print('AI turn ["X"]')
+            ai_turn()
+            print("AI played in {} sec".format(time.time()-t3))
+            print("Calculated Score : ",currentScore)
 
 
     print("\n Final board :")
     print_board(Start);
     score = eval_win(Start, COMP)
-    if score == 1:
-        print("AI win")
-    elif score == -1:
-        print("Human win")
+    if score > 0:
+        print("AI wins")
+    elif score < 0:
+        if firstPlayer == 3:
+            print("AI 2 wins")
+        else :
+            print("Human wins")
     else:
         print("draw")
 
