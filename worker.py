@@ -154,6 +154,7 @@ class ConfWorker(QtCore.QObject):
 
             [player, player, player, player, player]
         ]
+
         return tab, ([1]*10 + [5]*10 + [10]*5 + [infinity])
 
     def equal(self, line, subline):
