@@ -113,12 +113,18 @@ def generateCenterCheck(player):
     ]
     return tab, ([1]*10 + [5]*10 + [10]*5 + [100])
 
-def find(line, subline):
+def equal(line, subline):
     if np.array_equal(subline, line):
     #if np.all( [subline == line] ):
         return True
     else :
         return False
+
+def find(line, subline):
+    for i in range(len(line)-len(subline) + 1):
+        if np.all( [subline == line[i:i+len(subline)]] ):
+            return True
+    return False
 
 
 def eval_line(line):
@@ -127,14 +133,13 @@ def eval_line(line):
     accu = 0
 
     for idx in range(len(tabC)): 
-        if find(line, tabC[idx]):
+        if equal(line, tabC[idx]):
             accu += tabC_score[idx]
 
     for idx in range(len(tabC)): 
-        if find(-line, tabC[idx]):
-            accu -= tabC_score[idx]*1.1
-
-
+        if equal(-line, tabC[idx]):
+            accu -= tabC_score[idx]
+            #*1.1
     return accu
 
 
@@ -157,7 +162,7 @@ def getLineWin(line):
     return 0
 
 
-def eval_global_score(state, score, lastMove, player, factor):
+def eval_global_score(state, score, lastMove, player):
 
     height = HEIGHT
     line = HEIGHT - hasSpace(state, lastMove)
@@ -193,7 +198,7 @@ def eval_global_score(state, score, lastMove, player, factor):
 
     removeMove(state,lastMove)
 
-    return score + (newScore -previousScore)*factor
+    return score + (newScore -previousScore)
 
 
 
@@ -230,14 +235,14 @@ def human_turn():
     while move < 1 or move > WIDTH:
         try:
             move = int(input('Choose column (1-{}): '.format(WIDTH)))
-            if move < WIDTH and move > 1:
+            if move <= WIDTH and move >= 1:
                 can_move = (hasSpace(Start,move-1) != 0)
 
                 if not can_move :
                     print('Bad move')
                     move = -1
                 else:
-                    currentScore = eval_global_score(Start, currentScore, move-1, HUMAN, 1)
+                    currentScore = eval_global_score(Start, currentScore, move-1, HUMAN)
                     addMove(Start,move-1, HUMAN)
             else :
                 print('Bad move')
@@ -256,7 +261,7 @@ def choose_move(tupleList, movelist):
 
     for i in range(len(tupleList)):
 
-        #print(Scores[tupleList[i]])
+        print(Scores[tupleList[i]])
 
         if Scores[tupleList[i]] > best:
             best = Scores[tupleList[i]]
@@ -275,7 +280,7 @@ def choose_move(tupleList, movelist):
                 best_Move = [i]
                 break
 
-    currentScore = eval_global_score(Start, currentScore, best_Move[0], COMP, 1)
+    currentScore = eval_global_score(Start, currentScore, best_Move[0], COMP)
     addMove(Start,best_Move[0], COMP)
     print("******AI played column ", best_Move[0]+1, "******");
 
@@ -339,28 +344,34 @@ def minimax(current_state, player, depth, score, alpha, beta):
                 for el in lastMoves:
                     
                     t2 = time.time()
-                    childscore = eval_global_score(current_state, score, el, player, depth)
+                    childscore = eval_global_score(current_state, score, el, player)
                     tScore += time.time() - t2
                     
                     addMove(current_state, el, player)
-                    if depth == DEPTH:
-                        outList.append(npToTuple(current_state))
-                        movelist.append(el)
-                    tupleTmp = npToTuple(current_state)
                     
+                    tupleTmp = npToTuple(current_state)
+
+                    if depth == DEPTH:
+                        outList.append(tupleTmp)
+                        movelist.append(el)
+
                     minimax(current_state, -player, depth-1, childscore, alpha, beta)
 
                     scoreChild = Scores[tupleTmp]
                     removeMove(current_state,el)
                     score = max(score,scoreChild) if player == COMP else min(score,scoreChild)
-        
+                    
+                    # if depth == 4:
+                    #     print("score", score)
+
                     if (player == COMP):
                         alpha = max(alpha, scoreChild)
                     else :
                         beta = min(beta, scoreChild)
                     if beta <= alpha:
-                        break;
-        Scores[npToTuple(current_state)] = score
+                        pass
+        Scores[npToTuple(current_state)] = score 
+        #* depth
         return outList,movelist
 
             
