@@ -20,6 +20,9 @@ class ConfWorker(QtCore.QObject):
     turn_signal = QtCore.pyqtSignal(int)
     start_chrono_signal = QtCore.pyqtSignal()
     stop_chrono_signal = QtCore.pyqtSignal()
+    signal_score = QtCore.pyqtSignal(int)
+    signal_noeud = QtCore.pyqtSignal(int)
+    signal_tps_ia = QtCore.pyqtSignal(int,float)
     QUIT = False
     #PUISSANCE 5 Grille 12*8
 
@@ -258,9 +261,9 @@ class ConfWorker(QtCore.QObject):
 
     def human_turn(self):
         move = -1
-        print(f'Human turn ["O"]')
-        self.print_board(self.Start)
-
+        #print(f'Human turn ["O"]')
+        #self.print_board(self.Start)
+        self.turn_signal.emit(self.HUMAN)
         while move < 1 or move > self.WIDTH:
             try:
                 while not self.signal_reived:
@@ -317,10 +320,8 @@ class ConfWorker(QtCore.QObject):
         print("******AI played column ", best_Move[0]+1, "******")
 
     def ai_turn(self): 
-        print(f'AI turn ["X"]')
+        #print(f'AI turn ["X"]')
         self.turn_signal.emit(self.COMP)
-
-        self.print_board(self.Start)
         self.Scores = {}
         tScore = 0
         tDraw = 0
@@ -333,7 +334,55 @@ class ConfWorker(QtCore.QObject):
         #t1 = time.time()
         self.choose_move(outList,movelist)
         #print(">>>>timer choose_move {}".format(time.time()-t1))
+        self.signal_noeud.emit(len(self.Scores))
         #print(len(Scores))
+
+    def ai_turn2(self): 
+        #global Start, Scores, currentScore, tScore,tDraw
+        self.Scores = {}
+        self.tScore = 0
+        self.tDraw = 0
+        #t0 = time.time()
+        self.turn_signal.emit(2)
+        tmp = self.Start.copy()
+        outList, movelist = self.minimax(tmp, self.HUMAN, self.DEPTH, self.currentScore, -infinity, infinity)
+        #print(">>>timer minimax {}".format(time.time()-t0))
+        #print(" --->>> total time  eval_global_score {}".format(tScore))
+        #print(" --->>> total time  draw {}".format(tDraw))
+        #t1 = time.time()
+        self.choose_move2(outList,movelist)
+        #print(">>>>timer choose_move {}".format(time.time()-t1))
+        print("Number of nodes :", len(self.Scores))
+        self.signal_noeud.emit(len(self.Scores))
+
+    def choose_move2(self,tupleList, movelist):
+        #global Start, currentScore
+        best = +infinity
+        best_Move = []
+
+        for i in range(len(tupleList)):
+
+            #print(Scores[tupleList[i]])
+
+            if self.Scores[tupleList[i]] < best:
+                best = self.Scores[tupleList[i]]
+                best_Move = [movelist[i]]
+
+            if self.Scores[tupleList[i]] == best:
+                best_Move.append(movelist[i])
+
+        if len(best_Move) > 1:
+            choice = random.randint(0, len(best_Move)-1)
+            best_Move = [best_Move[choice]]
+
+        if len(best_Move) == 0:
+            for i in range(self.WIDTH):
+                if self.hasSpace(self.Start,i):
+                    best_Move = [i]
+                    break
+        self.currentScore = self.eval_global_score(self.Start, self.currentScore, best_Move[0], self.HUMAN)
+        self.addMove(self.Start,best_Move[0], self.HUMAN)
+        print("******AI 2 played column ", best_Move[0]+1, "******");
 
     def verticalMirror(self, state):
         return state[:,::-1]
@@ -484,28 +533,66 @@ class ConfWorker(QtCore.QObject):
         print(" preCalcul {}\n".format(time.time() - t1))
         
         while not self.QUIT:
-            firstPlayer=2
-            firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
-            while (firstPlayer!= 0 and firstPlayer!=1):
-                print("Please press 0 or 1")
-                firstPlayer = int(input('Press 0 to go first, 1 to go second : '))
+            firstPlayer=3
+            firstPlayer = int(input('Press 0 to go first, 1 to go second, 2 to watch AI play against itself: '))
+            while (firstPlayer!= 0 and firstPlayer!=1 and firstPlayer != 2):
+                print("Please press 0 or 1 or 2")
+                firstPlayer = int(input('Press 0 to go first, 1 to go second, 2 to watch AI play against itself: '))
 
             print("********************")
-
-            if (firstPlayer == 1):
-                t3 = time.time()
-                self.ai_turn()
-                print("AI played in {} sec".format(time.time()-t3))
-            self.start_chrono_signal.emit()
-            while (type(self.eval_win(self.Start, self.COMP)) != int):
-                self.human_turn()
-                print("Calculated Score : ",self.currentScore)
-                if(type(self.eval_win(self.Start, self.HUMAN)) == int):
-                    break
-                t3 = time.time()
-                self.ai_turn()
-                print("AI played in {} sec".format(time.time()-t3))
-                print("Calculated Score : ",self.currentScore)
+            if (firstPlayer !=2):
+                if (firstPlayer == 1):
+                    self.print_board(self.Start)
+                    print('AI turn ["X"]')
+                    t3 = time.time()
+                    self.ai_turn()
+                    t4 = time.time()-t3
+                    print("AI played in {} sec".format(t4))
+                    self.signal_tps_ia.emit(1,t4)
+                self.start_chrono_signal.emit()
+                while (type(self.eval_win(self.Start, self.COMP)) != int):
+                    self.print_board(self.Start)
+                    print('Human turn ["O"]')
+                    self.human_turn()
+                    print("Calculated Score : ",self.currentScore)
+                    self.signal_score.emit(self.currentScore)
+                    if(type(self.eval_win(self.Start, self.HUMAN)) == int):
+                        break
+                    self.print_board(self.Start)
+                    print('AI turn ["X"]')
+                    t3 = time.time()
+                    self.ai_turn()
+                    t4 = time.time()-t3
+                    print("AI played in {} sec".format(t4))
+                    self.signal_tps_ia.emit(1,t4)
+                    print("Calculated Score : ",self.currentScore)
+                    self.signal_score.emit(self.currentScore)
+            else:
+                print("Ai will play with AI 2")
+                self.start_chrono_signal.emit()
+                while (type(self.eval_win(self.Start, self.COMP)) != int):
+                    self.print_board(self.Start)
+                    input('Next Move (press Key)')
+                    print('AI 2 turn ["O"]')
+                    t3 = time.time()
+                    self.ai_turn2()
+                    t4 = time.time()-t3
+                    print("AI played in {} sec".format(t4))
+                    self.signal_tps_ia.emit(2,t4)
+                    print("Calculated Score : ",self.currentScore)
+                    self.signal_score.emit(self.currentScore)
+                    if(type(self.eval_win(self.Start, self.HUMAN)) == int):
+                        break
+                    self.print_board(self.Start)
+                    input('Next Move (press Key)')
+                    t3 = time.time()
+                    print('AI turn ["X"]')
+                    self.ai_turn()
+                    t4 = time.time()-t3
+                    print("AI played in {} sec".format(t4))
+                    self.signal_tps_ia.emit(1,t4)
+                    print("Calculated Score : ",self.currentScore)
+                    self.signal_score.emit(self.currentScore)
 
 
             print("\n Final board :")

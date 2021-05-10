@@ -39,12 +39,28 @@ class Ui_Puissance4Plus1(QtWidgets.QMainWindow):
         self.worker.turn_signal.connect(self.setTextTurn)
         self.worker.start_chrono_signal.connect(self.activateChrono)
         self.worker.stop_chrono_signal.connect(self.desactivateChrono)
+        self.worker.signal_score.connect(self.setTextScore)
+        self.worker.signal_noeud.connect(self.setNbNoeud)
+        self.worker.signal_tps_ia.connect(self.setTpsIA)
         self.show()
         
-        
+    def setTextScore(self,s):
+        self.scoreLabel.setText("Score calculé : " + str(s))
+    
+    def setNbNoeud(self, s):
+        self.noeudLabel.setText("Noeuds parcourus : " + str(s))
+
+    def setTpsIA(self, ai, f):
+        if ai == 1: 
+            self.tpsIALabel.setText("Temps execution IA : {:.2f} sec".format(f))
+        else:
+            self.tpsIALabel.setText("Temps execution IA2 : {:.2f} sec".format(f))
+
     def setTextTurn(self, i):
         if i == 1:
             self.turnValue.setText("AI")
+        elif i == 2:
+            self.turnValue.setText("AI 2")
         else:
             self.turnValue.setText("Human")
 
