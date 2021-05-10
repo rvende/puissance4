@@ -421,6 +421,7 @@ class ConfWorker(QtCore.QObject):
                         t2 = time.time()
                         childscore = self.eval_global_score(current_state, score, el, player)
                         self.tScore += time.time() - t2
+
                         
                         self.addMove(current_state, el, player)
 
@@ -434,6 +435,7 @@ class ConfWorker(QtCore.QObject):
 
                         scoreChild = self.Scores[tupleTmp]
                         self.removeMove(current_state,el)
+
                         score = max(score,scoreChild) if player == self.COMP else min(score,scoreChild)
             
                         if (player == self.COMP):
@@ -441,7 +443,7 @@ class ConfWorker(QtCore.QObject):
                         else :
                             beta = min(beta, scoreChild)
                         if beta <= alpha:
-                            pass
+                            break
 
             self.Scores[self.npToTuple(current_state)] = score
             return outList,movelist
@@ -604,12 +606,16 @@ class ConfWorker(QtCore.QObject):
                 self.request_signal.emit("AI WIN !!!")
             elif score == -1:
                 #print("Human win")
-                self.stop_chrono_signal.emit()
-                self.request_signal.emit("Human WIN !!!")
+                if firstPlayer != 2:
+                    self.stop_chrono_signal.emit()
+                    self.request_signal.emit("Human WIN !!!")
+                else :
+                    self.stop_chrono_signal.emit()
+                    self.request_signal.emit("AI 2 WIN !!!")
             else:
                 #print("draw")
                 self.stop_chrono_signal.emit()
-                self.request_signal.emit("Human WIN !!!")
+                self.request_signal.emit("Draw !!!")
 
 
 
